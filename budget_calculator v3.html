@@ -1,0 +1,856 @@
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .summary {
+                grid-template-columns: 1fr;
+            }
+            
+            .color-scheme-selector {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .chart-tabs {
+                flex-wrap: wrap;
+            }
+            
+            .heatmap-container {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                gap: 8px;
+            }
+            
+            .heatmap-cell-name {
+                font-size: 12px;
+            }
+            
+            .heatmap-cell-amount {
+                font-size: 11px;
+            }
+            
+            .heatmap-cell-percentage {
+                font-size: 9px;
+            }
+        }<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 300;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+
+        .visualization-section {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 20px;
+        }
+
+        .chart-controls {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .chart-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            padding: 10px 20px;
+            border: 2px solid #e2e8f0;
+            background: #f7fafc;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .tab-button.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .tab-button:hover:not(.active) {
+            background: #e2e8f0;
+            transform: translateY(-2px);
+        }
+
+        .color-scheme-selector {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .color-scheme {
+            display: flex;
+            gap: 3px;
+            padding: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .color-scheme.active {
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+
+        .color-scheme:hover {
+            transform: scale(1.1);
+        }
+
+        .color-swatch {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .heatmap-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .heatmap-cell {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .heatmap-cell:hover {
+            transform: scale(1.05);
+            z-index: 10;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .heatmap-cell-name {
+            font-weight: bold;
+            font-size: 14px;
+            color: white;
+            text-align: center;
+            margin-bottom: 5px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .heatmap-cell-amount {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .heatmap-cell-percentage {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.8);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .form-section {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .chart-section {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .income-section {
+            margin-bottom: 25px;
+        }
+
+        .income-section h3 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .income-section input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #f7fafc;
+        }
+
+        .income-section input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .expenses-section h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .expense-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .expense-row input {
+            padding: 10px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: #f7fafc;
+        }
+
+        .expense-row input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .calculate-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .calculate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .calculate-btn:active {
+            transform: translateY(0);
+        }
+
+        .results {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+
+        .results h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .balance {
+            font-size: 2em;
+            font-weight: bold;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .balance.positive {
+            color: #38a169;
+            background: rgba(56, 161, 105, 0.1);
+            border: 2px solid rgba(56, 161, 105, 0.3);
+        }
+
+        .balance.negative {
+            color: #e53e3e;
+            background: rgba(229, 62, 62, 0.1);
+            border: 2px solid rgba(229, 62, 62, 0.3);
+        }
+
+        .summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .summary-item {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .summary-label {
+            font-size: 14px;
+            color: #718096;
+            margin-bottom: 5px;
+        }
+
+        .summary-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        canvas {
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .legend {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            width: 100%;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background: #f7fafc;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .summary {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💰 Budget Calculator</h1>
+        
+        <div class="main-content">
+            <div class="form-section">
+                <div class="income-section">
+                    <h3>Monthly Income</h3>
+                    <input type="number" id="monthlyIncome" placeholder="Enter your monthly income" step="0.01">
+                </div>
+                
+                <div class="expenses-section">
+                    <h3>Monthly Expenses</h3>
+                    <div id="expenseRows"></div>
+                </div>
+                
+                <button class="calculate-btn" onclick="calculateBudget()">Calculate Budget</button>
+            </div>
+            
+            <div class="visualization-section">
+                <div class="chart-controls">
+                    <div class="chart-tabs">
+                        <button class="tab-button active" onclick="switchChart('pie')">🥧 Pie Chart</button>
+                        <button class="tab-button" onclick="switchChart('heatmap')">🔥 Heatmap</button>
+                    </div>
+                    
+                    <div class="color-scheme-selector">
+                        <span style="font-weight: 500; color: #4a5568;">Color Scheme:</span>
+                        <div class="color-scheme active" data-scheme="vibrant" onclick="changeColorScheme('vibrant')">
+                            <div class="color-swatch" style="background: #ff6b6b;"></div>
+                            <div class="color-swatch" style="background: #4ecdc4;"></div>
+                            <div class="color-swatch" style="background: #45b7d1;"></div>
+                            <div class="color-swatch" style="background: #f9ca24;"></div>
+                        </div>
+                        <div class="color-scheme" data-scheme="pastel" onclick="changeColorScheme('pastel')">
+                            <div class="color-swatch" style="background: #ffeaa7;"></div>
+                            <div class="color-swatch" style="background: #fab1a0;"></div>
+                            <div class="color-swatch" style="background: #74b9ff;"></div>
+                            <div class="color-swatch" style="background: #55a3ff;"></div>
+                        </div>
+                        <div class="color-scheme" data-scheme="warm" onclick="changeColorScheme('warm')">
+                            <div class="color-swatch" style="background: #ff7675;"></div>
+                            <div class="color-swatch" style="background: #fd79a8;"></div>
+                            <div class="color-swatch" style="background: #fdcb6e;"></div>
+                            <div class="color-swatch" style="background: #e17055;"></div>
+                        </div>
+                        <div class="color-scheme" data-scheme="cool" onclick="changeColorScheme('cool')">
+                            <div class="color-swatch" style="background: #00b894;"></div>
+                            <div class="color-swatch" style="background: #00cec9;"></div>
+                            <div class="color-swatch" style="background: #0984e3;"></div>
+                            <div class="color-swatch" style="background: #6c5ce7;"></div>
+                        </div>
+                        <div class="color-scheme" data-scheme="monochrome" onclick="changeColorScheme('monochrome')">
+                            <div class="color-swatch" style="background: #2d3436;"></div>
+                            <div class="color-swatch" style="background: #636e72;"></div>
+                            <div class="color-swatch" style="background: #74b9ff;"></div>
+                            <div class="color-swatch" style="background: #a29bfe;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="pieChartContainer" class="chart-section">
+                    <h3>Expense Breakdown</h3>
+                    <canvas id="pieChart" width="400" height="400"></canvas>
+                    <div class="legend" id="legend"></div>
+                </div>
+                
+                <div id="heatmapContainer" class="heatmap-container" style="display: none;">
+                    <!-- Heatmap cells will be generated here -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="results" id="results" style="display: none;">
+            <h3>Budget Summary</h3>
+            <div id="balanceDisplay" class="balance"></div>
+            <div class="summary">
+                <div class="summary-item">
+                    <div class="summary-label">Total Income</div>
+                    <div class="summary-value" id="totalIncome">$0.00</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Total Expenses</div>
+                    <div class="summary-value" id="totalExpenses">$0.00</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize expense rows
+        function initializeExpenseRows() {
+            const container = document.getElementById('expenseRows');
+            for (let i = 0; i < 10; i++) {
+                const row = document.createElement('div');
+                row.className = 'expense-row';
+                row.innerHTML = `
+                    <input type="text" placeholder="Expense name (e.g., Rent, Food)" id="expenseName${i}">
+                    <input type="number" placeholder="Amount" step="0.01" id="expenseAmount${i}">
+                `;
+                container.appendChild(row);
+            }
+        }
+
+        // Color schemes
+        const colorSchemes = {
+            vibrant: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#ff9ff3', '#54a0ff', '#5f27cd', '#00d2d3', '#ff9f43', '#10ac84'],
+            pastel: ['#ffeaa7', '#fab1a0', '#74b9ff', '#55a3ff', '#fd79a8', '#fdcb6e', '#a29bfe', '#6c5ce7', '#fd79a8', '#00b894'],
+            warm: ['#ff7675', '#fd79a8', '#fdcb6e', '#e17055', '#d63031', '#e84393', '#f39c12', '#e67e22', '#c0392b', '#8e44ad'],
+            cool: ['#00b894', '#00cec9', '#0984e3', '#6c5ce7', '#74b9ff', '#81ecec', '#55a3ff', '#a29bfe', '#00d2d3', '#1dd1a1'],
+            monochrome: ['#2d3436', '#636e72', '#74b9ff', '#a29bfe', '#ddd', '#b2bec3', '#636e72', '#2d3436', '#55a3ff', '#6c5ce7']
+        };
+
+        let currentColorScheme = 'vibrant';
+        let currentChart = 'pie';
+
+        // Initialize expense rows
+        function initializeExpenseRows() {
+            const container = document.getElementById('expenseRows');
+            for (let i = 0; i < 10; i++) {
+                const row = document.createElement('div');
+                row.className = 'expense-row';
+                row.innerHTML = `
+                    <input type="text" placeholder="Expense name (e.g., Rent, Food)" id="expenseName${i}">
+                    <input type="number" placeholder="Amount" step="0.01" id="expenseAmount${i}">
+                `;
+                container.appendChild(row);
+            }
+        }
+
+        // Generate colors based on selected scheme
+        function generateColors(count) {
+            const scheme = colorSchemes[currentColorScheme];
+            const colors = [];
+            for (let i = 0; i < count; i++) {
+                if (i < scheme.length) {
+                    colors.push(scheme[i]);
+                } else {
+                    // Generate additional colors if needed
+                    const hue = (i * 360 / count) % 360;
+                    const saturation = 70 + (i % 3) * 10;
+                    const lightness = 50 + (i % 4) * 8;
+                    colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
+                }
+            }
+            return colors;
+        }
+
+        // Switch between chart types
+        function switchChart(chartType) {
+            currentChart = chartType;
+            
+            // Update active tab
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Show/hide containers
+            if (chartType === 'pie') {
+                document.getElementById('pieChartContainer').style.display = 'block';
+                document.getElementById('heatmapContainer').style.display = 'none';
+            } else {
+                document.getElementById('pieChartContainer').style.display = 'none';
+                document.getElementById('heatmapContainer').style.display = 'grid';
+            }
+            
+            // Refresh visualization with current data
+            if (window.lastExpenses) {
+                if (chartType === 'pie') {
+                    drawPieChart(window.lastExpenses);
+                    createLegend(window.lastExpenses);
+                } else {
+                    drawHeatmap(window.lastExpenses);
+                }
+            }
+        }
+
+        // Change color scheme
+        function changeColorScheme(scheme) {
+            currentColorScheme = scheme;
+            
+            // Update active color scheme
+            document.querySelectorAll('.color-scheme').forEach(cs => cs.classList.remove('active'));
+            document.querySelector(`[data-scheme="${scheme}"]`).classList.add('active');
+            
+            // Refresh current visualization
+            if (window.lastExpenses) {
+                if (currentChart === 'pie') {
+                    drawPieChart(window.lastExpenses);
+                    createLegend(window.lastExpenses);
+                } else {
+                    drawHeatmap(window.lastExpenses);
+                }
+            }
+        }
+
+        // Draw heatmap visualization
+        function drawHeatmap(expenses) {
+            const container = document.getElementById('heatmapContainer');
+            container.innerHTML = '';
+            
+            if (expenses.length === 0 || expenses.every(exp => exp.amount === 0)) {
+                container.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #718096; font-size: 18px;">
+                        No expenses to display in heatmap
+                    </div>
+                `;
+                return;
+            }
+
+            const total = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+            const maxAmount = Math.max(...expenses.map(exp => exp.amount));
+            const colors = generateColors(expenses.length);
+            
+            expenses.forEach((expense, index) => {
+                if (expense.amount > 0) {
+                    const cell = document.createElement('div');
+                    cell.className = 'heatmap-cell';
+                    
+                    // Calculate intensity based on amount (0.3 to 1.0)
+                    const intensity = 0.3 + (expense.amount / maxAmount) * 0.7;
+                    const baseColor = colors[index];
+                    
+                    // Apply intensity to the color
+                    const rgb = hexToRgb(baseColor) || { r: 102, g: 126, b: 234 };
+                    const backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${intensity})`;
+                    
+                    cell.style.backgroundColor = backgroundColor;
+                    cell.style.border = `3px solid ${baseColor}`;
+                    
+                    const percentage = ((expense.amount / total) * 100).toFixed(1);
+                    
+                    cell.innerHTML = `
+                        <div class="heatmap-cell-name">${expense.name}</div>
+                        <div class="heatmap-cell-amount">${expense.amount.toFixed(2)}</div>
+                        <div class="heatmap-cell-percentage">${percentage}%</div>
+                    `;
+                    
+                    // Add click event for interaction
+                    cell.addEventListener('click', () => {
+                        showExpenseDetails(expense, percentage);
+                    });
+                    
+                    container.appendChild(cell);
+                }
+            });
+        }
+
+        // Helper function to convert hex to RGB
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+
+        // Show expense details (could be expanded for more interactivity)
+        function showExpenseDetails(expense, percentage) {
+            alert(`${expense.name}\nAmount: ${expense.amount.toFixed(2)}\nPercentage: ${percentage}%`);
+        }
+
+        // Draw pie chart
+        function drawPieChart(expenses) {
+            const canvas = document.getElementById('pieChart');
+            const ctx = canvas.getContext('2d');
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = Math.min(centerX, centerY) - 30;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (expenses.length === 0 || expenses.every(exp => exp.amount === 0)) {
+                ctx.fillStyle = '#e2e8f0';
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                ctx.fillStyle = '#718096';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('No expenses to display', centerX, centerY);
+                return;
+            }
+
+            const total = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+            const colors = generateColors(expenses.length);
+            
+            let currentAngle = -Math.PI / 2; // Start from top
+
+            expenses.forEach((expense, index) => {
+                if (expense.amount > 0) {
+                    const sliceAngle = (expense.amount / total) * 2 * Math.PI;
+                    
+                    // Draw slice
+                    ctx.fillStyle = colors[index];
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, centerY);
+                    ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Draw slice border
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                    
+                    // Draw label
+                    const labelAngle = currentAngle + sliceAngle / 2;
+                    const labelX = centerX + Math.cos(labelAngle) * (radius * 0.7);
+                    const labelY = centerY + Math.sin(labelAngle) * (radius * 0.7);
+                    
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    
+                    // Add text shadow for better readability
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+                    ctx.shadowBlur = 3;
+                    ctx.shadowOffsetX = 2;
+                    ctx.shadowOffsetY = 2;
+                    
+                    const percentage = ((expense.amount / total) * 100).toFixed(1);
+                    ctx.fillText(`${percentage}%`, labelX, labelY);
+                    
+                    // Reset shadow
+                    ctx.shadowColor = 'transparent';
+                    ctx.shadowBlur = 0;
+                    ctx.shadowOffsetX = 0;
+                    ctx.shadowOffsetY = 0;
+                    
+                    currentAngle += sliceAngle;
+                }
+            });
+        }
+
+        // Create legend
+        function createLegend(expenses) {
+            const legendContainer = document.getElementById('legend');
+            legendContainer.innerHTML = '';
+            
+            if (expenses.length === 0 || expenses.every(exp => exp.amount === 0)) {
+                return;
+            }
+
+            const colors = generateColors(expenses.length);
+            const total = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+            
+            expenses.forEach((expense, index) => {
+                if (expense.amount > 0) {
+                    const legendItem = document.createElement('div');
+                    legendItem.className = 'legend-item';
+                    
+                    const percentage = ((expense.amount / total) * 100).toFixed(1);
+                    
+                    legendItem.innerHTML = `
+                        <div class="legend-color" style="background-color: ${colors[index]}"></div>
+                        <span><strong>${expense.name}</strong> - ${expense.amount.toFixed(2)} (${percentage}%)</span>
+                    `;
+                    
+                    legendContainer.appendChild(legendItem);
+                }
+            });
+        }
+
+        // Main calculation function
+        function calculateBudget() {
+            const income = parseFloat(document.getElementById('monthlyIncome').value) || 0;
+            const expenses = [];
+            let totalExpenses = 0;
+
+            // Collect expense data
+            for (let i = 0; i < 10; i++) {
+                const name = document.getElementById(`expenseName${i}`).value.trim();
+                const amount = parseFloat(document.getElementById(`expenseAmount${i}`).value) || 0;
+                
+                if (name && amount > 0) {
+                    expenses.push({ name, amount });
+                    totalExpenses += amount;
+                }
+            }
+
+            // Store expenses globally for chart switching
+            window.lastExpenses = expenses;
+
+            // Calculate balance
+            const balance = income - totalExpenses;
+
+            // Update display
+            document.getElementById('totalIncome').textContent = `${income.toFixed(2)}`;
+            document.getElementById('totalExpenses').textContent = `${totalExpenses.toFixed(2)}`;
+            
+            const balanceDisplay = document.getElementById('balanceDisplay');
+            balanceDisplay.textContent = `${balance.toFixed(2)}`;
+            balanceDisplay.className = `balance ${balance >= 0 ? 'positive' : 'negative'}`;
+
+            // Show results
+            document.getElementById('results').style.display = 'block';
+
+            // Draw current chart type
+            if (currentChart === 'pie') {
+                drawPieChart(expenses);
+                createLegend(expenses);
+            } else {
+                drawHeatmap(expenses);
+            }
+
+            // Smooth scroll to results
+            document.getElementById('results').scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'nearest' 
+            });
+        }
+
+        // Initialize the page
+        window.onload = function() {
+            initializeExpenseRows();
+            
+            // Add enter key support
+            document.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    calculateBudget();
+                }
+            });
+        };
+    </script>
+</body>
+</html>
