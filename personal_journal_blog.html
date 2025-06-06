@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Personal Journal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(248, 248, 248, 0.98);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            border: 1px solid rgba(191, 255, 0, 0.1);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+            color: #f8f8f8;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            border-bottom: 2px solid #bfff00;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(191,255,0,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(191,255,0,0.05)"/><circle cx="50" cy="10" r="1" fill="rgba(191,255,0,0.03)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+            background: linear-gradient(135deg, #bfff00, #a6e600);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.8;
+            position: relative;
+            z-index: 1;
+            color: #e0e0e0;
+        }
+
+        .new-post-section {
+            padding: 30px;
+            border-bottom: 1px solid #e0e0e0;
+            background: linear-gradient(45deg, #f8f8f8, #ffffff);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2a2a2a;
+            font-size: 0.95em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            background: #fafafa;
+            color: #2a2a2a;
+        }
+
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: #bfff00;
+            box-shadow: 0 0 0 3px rgba(191, 255, 0, 0.2);
+            transform: translateY(-2px);
+            background: #ffffff;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .image-upload {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            border: none;
+            font-weight: bold;
+        }
+
+        .image-upload:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .image-upload input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .image-preview {
+            margin-top: 15px;
+            display: none;
+        }
+
+        .image-preview img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
+        }
+
+        .posts-section {
+            padding: 30px;
+        }
+
+        .posts-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .posts-header h2 {
+            color: #2c3e50;
+            font-size: 1.8em;
+        }
+
+        .posts-count {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .post {
+            background: white;
+            margin-bottom: 25px;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+            background-image: linear-gradient(white, white), linear-gradient(135deg, #667eea, #764ba2);
+            background-origin: border-box;
+            background-clip: padding-box, border-box;
+        }
+
+        .post:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .post-title {
+            font-size: 1.4em;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .post-date {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            font-style: italic;
+        }
+
+        .post-content {
+            color: #34495e;
+            margin-bottom: 15px;
+            line-height: 1.8;
+        }
+
+        .post-image {
+            margin: 15px 0;
+        }
+
+        .post-image img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #e74c3c;
+            cursor: pointer;
+            font-size: 1.2em;
+            padding: 5px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            background: #e74c3c;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .no-posts {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 40px;
+            background: linear-gradient(45deg, #f8f9fa, #ffffff);
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .clear-all-btn {
+            float: right;
+            margin-bottom: 20px;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .post {
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .new-post-section, .posts-section {
+                padding: 20px;
+            }
+            
+            .posts-header {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✍️ My Personal Journal</h1>
+            <p>Capture your thoughts, memories, and moments</p>
+        </div>
+
+        <div class="new-post-section">
+            <div class="form-group">
+                <label for="postTitle">Entry Title</label>
+                <input type="text" id="postTitle" placeholder="What's on your mind today?">
+            </div>
+
+            <div class="form-group">
+                <label for="postContent">Your Thoughts</label>
+                <textarea id="postContent" placeholder="Write your journal entry here..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Add an Image (optional)</label>
+                <div class="image-upload">
+                    📷 Choose Image
+                    <input type="file" id="imageInput" accept="image/*">
+                </div>
+                <div class="image-preview" id="imagePreview">
+                    <img id="previewImg" src="" alt="Preview">
+                </div>
+            </div>
+
+            <button class="btn" onclick="addPost()">✨ Save Entry</button>
+            <button class="btn" onclick="clearForm()">🗑️ Clear</button>
+        </div>
+
+        <div class="posts-section">
+            <div class="posts-header">
+                <h2>📖 Your Journal Entries</h2>
+                <span class="posts-count" id="postsCount">0 entries</span>
+            </div>
+            <button class="btn btn-danger clear-all-btn" onclick="clearAllPosts()">Clear All Entries</button>
+            <div class="clearfix"></div>
+            <div id="postsContainer">
+                <div class="no-posts">
+                    <h3>🌟 Start Your Journey</h3>
+                    <p>No journal entries yet. Create your first entry above to begin documenting your thoughts and experiences!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let posts = [];
+        let currentImageData = null;
+
+        // Load posts from memory on page load
+        window.addEventListener('load', function() {
+            displayPosts();
+        });
+
+        // Handle image upload
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentImageData = e.target.result;
+                    document.getElementById('previewImg').src = currentImageData;
+                    document.getElementById('imagePreview').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function addPost() {
+            const title = document.getElementById('postTitle').value.trim();
+            const content = document.getElementById('postContent').value.trim();
+
+            if (!title && !content) {
+                alert('Please enter at least a title or some content for your journal entry.');
+                return;
+            }
+
+            const post = {
+                id: Date.now(),
+                title: title || 'Untitled Entry',
+                content: content,
+                image: currentImageData,
+                date: new Date().toLocaleString(),
+                timestamp: Date.now()
+            };
+
+            posts.unshift(post); // Add to beginning of array (newest first)
+            displayPosts();
+            clearForm();
+        }
+
+        function clearForm() {
+            document.getElementById('postTitle').value = '';
+            document.getElementById('postContent').value = '';
+            document.getElementById('imageInput').value = '';
+            document.getElementById('imagePreview').style.display = 'none';
+            currentImageData = null;
+        }
+
+        function deletePost(id) {
+            if (confirm('Are you sure you want to delete this journal entry?')) {
+                posts = posts.filter(post => post.id !== id);
+                displayPosts();
+            }
+        }
+
+        function clearAllPosts() {
+            if (posts.length === 0) {
+                alert('No entries to clear!');
+                return;
+            }
+            
+            if (confirm('Are you sure you want to delete ALL journal entries? This cannot be undone.')) {
+                posts = [];
+                displayPosts();
+            }
+        }
+
+        function displayPosts() {
+            const container = document.getElementById('postsContainer');
+            const countElement = document.getElementById('postsCount');
+            
+            countElement.textContent = `${posts.length} ${posts.length === 1 ? 'entry' : 'entries'}`;
+
+            if (posts.length === 0) {
+                container.innerHTML = `
+                    <div class="no-posts">
+                        <h3>🌟 Start Your Journey</h3>
+                        <p>No journal entries yet. Create your first entry above to begin documenting your thoughts and experiences!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = posts.map(post => `
+                <div class="post">
+                    <div class="post-header">
+                        <div>
+                            <div class="post-title">${escapeHtml(post.title)}</div>
+                            <div class="post-date">📅 ${post.date}</div>
+                        </div>
+                        <button class="delete-btn" onclick="deletePost(${post.id})" title="Delete entry">
+                            ❌
+                        </button>
+                    </div>
+                    <div class="post-content">${escapeHtml(post.content).replace(/\n/g, '<br>')}</div>
+                    ${post.image ? `<div class="post-image"><img src="${post.image}" alt="Journal image"></div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Add some keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addPost();
+                } else if (e.key === 'k') {
+                    e.preventDefault();
+                    clearForm();
+                }
+            }
+        });
+
+        // Auto-save draft functionality
+        let draftTimer;
+        ['postTitle', 'postContent'].forEach(id => {
+            document.getElementById(id).addEventListener('input', function() {
+                clearTimeout(draftTimer);
+                draftTimer = setTimeout(() => {
+                    // Could implement draft saving here if needed
+                }, 1000);
+            });
+        });
+    </script>
+</body>
+</html>
