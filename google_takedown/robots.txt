@@ -1,0 +1,26 @@
+User-agent: Googlebot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: AdsBot-Google
+Disallow: /
+
+User-agent: APIs-Google
+Disallow: /
+
+User-agent: GoogleOther
+Disallow: /
+
+User-agent: MagiBot
+Disallow: /
+
+User-agent: DuplexWeb-Google
+Disallow: /
+
+User-agent: *
+Disallow: /
+
+User-agent: DuckDuckBot
+Allow: /

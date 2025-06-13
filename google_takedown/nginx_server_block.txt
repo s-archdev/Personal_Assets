@@ -1,0 +1,12 @@
+map $http_user_agent $deny_bot {
+    default 0;
+    "~*(Googlebot|Google-Extended|AdsBot-Google|APIs-Google|GoogleOther|MagiBot|DuplexWeb-Google)" 1;
+    "~*(bot|crawl|spider|slurp)" 1;
+    "~*DuckDuckBot" 0;
+}
+
+server {
+    if ($deny_bot) {
+        return 403;
+    }
+}

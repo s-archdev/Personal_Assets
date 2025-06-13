@@ -1,0 +1,8 @@
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const content = atob("SGVyZSBpcyB0aGUgYWN0dWFsIGNvbnRlbnQu"); // base64: "Here is the actual content."
+    document.getElementById("cloak").innerText = content;
+  });
+</script>
+<div id="cloak"></div>
+<noscript>JavaScript required</noscript>
