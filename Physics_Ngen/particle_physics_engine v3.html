@@ -1,0 +1,1151 @@
+                const presets = {
+                    fireworks: {
+                        gravity: -0.02,
+                        forceField: 0.1,
+                        emissionRate: 25,
+                        colors: ['#ff006e', '#ff8500', '#ffb700', '#fff700'],
+                        blendMode: 'screen',
+                        quantumMode: false,
+                        neuralMode: false,
+                        fluidMode: false,
+                        swarmMode: false
+                    },
+                    galaxy: {
+                        gravity: 0.001,
+                        forceField: 0.8,
+                        emissionRate: 30,
+                        colors: ['#8338ec', '#3a86ff', '#06ffa5', '#ffffff'],
+                        blendMode: 'screen',
+                        quantumMode: false,
+                        neuralMode: false,
+                        fluidMode: false,
+                        swarmMode: false
+                    },
+                    rain: {
+                        gravity: 0.1,
+                        forceField: 0.05,
+                        emissionRate: 40,
+                        colors: ['#3a86ff', '#06ffa5', '#ffffff'],
+                        blendMode: 'source-over',
+                        quantumMode: false,
+                        neuralMode: false,
+                        fluidMode: false,
+                        swarmMode: false
+                    },
+                    explosion: {
+                        gravity: 0.03,
+                        forceField: 0.3,
+                        emissionRate: 50,
+                        colors: ['#ff006e', '#ff4500', '#ffb700'],
+                        blendMode: 'screen',
+                        quantumMode: false,
+                        neuralMode: false,
+                        fluidMode: false,
+                        swarmMode: false
+                    },
+                    neural: {
+                        gravity: 0.001,
+                        forceField: 0.1,
+                        emissionRate: 20,
+                        magnetism: 30,
+                        turbulence: 5,
+                        colors: ['#00d4ff', '#8338ec', '#06ffa5'],
+                        blendMode: 'screen',
+                        quantumMode: false,
+                        neuralMode: true,
+                        fluidMode: false,
+                        swarmMode: true
+                    },
+                    quantum: {
+                        gravity: 0.005,
+                        forceField: 0.4,
+                        emissionRate: 35,
+                        magnetism: 50,
+                        turbulence: 20,
+                        fieldStrength: 100,
+                        colors: ['#00d4ff', '#ff006e', '#06ffa5', '#8338ec'],
+                        blendMode: 'screen',
+                        quantumMode: true,
+                        neuralMode: false,
+                        fluidMode: false,
+                        swarmMode: false
+                    },
+                    dna: {
+                        gravity: 0.01,
+                        forceField: 0.2,
+                        emissionRate: 25,
+                        magnetism: 40,
+                        turbulence: 30,
+                        colors: ['#06ffa5', '#00d4ff', '#ffffff'],
+                        blendMode: 'screen',
+                        quantumMode: false,
+                        neuralMode: false,
+                        fluidMode: false,
+                        swarmMode: true
+                    },
+                    fluid: {
+                        gravity: 0.02,
+                        forceField: 0.1,
+                        emissionRate: 45,
+                        turbulence: 15,
+                        colors: ['#3a86ff', '#00d4ff', '#06ffa5'],
+                        blendMode: 'source-over',
+                        quantumMode: false,
+                        neuralMode: false,
+                        fluidMode: true,
+                        swarmMode: false
+                    }
+                <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Particle Physics Engine</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #canvas {
+            display: block;
+            background: radial-gradient(circle at center, rgba(0,20,40,0.8) 0%, rgba(0,0,0,0.95) 100%);
+            cursor: crosshair;
+        }
+
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            color: white;
+            font-size: 12px;
+            max-width: 320px;
+            z-index: 1000;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #00d4ff;
+            font-weight: bold;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 4px;
+            background: linear-gradient(to right, #ff006e, #8338ec, #3a86ff);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #00d4ff;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .value-display {
+            min-width: 40px;
+            text-align: right;
+            color: #00d4ff;
+            font-weight: bold;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .data-input {
+            margin-top: 15px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            padding: 8px;
+            font-size: 11px;
+            resize: vertical;
+        }
+
+        .api-info {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 15px;
+            color: white;
+            font-size: 10px;
+            max-width: 300px;
+        }
+
+        .advanced-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            color: white;
+            font-size: 12px;
+            max-width: 280px;
+            z-index: 1000;
+        }
+
+        .neural-viz {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            opacity: 0.3;
+            mix-blend-mode: screen;
+        }
+
+        .quantum-field {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.1;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(255, 0, 110, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(131, 56, 236, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(58, 134, 255, 0.1) 0%, transparent 50%);
+            animation: quantumShift 8s ease-in-out infinite;
+        }
+
+        @keyframes quantumShift {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.1) rotate(180deg); }
+        }
+
+        .glow {
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 20px rgba(0, 212, 255, 0.2); }
+            to { box-shadow: 0 0 30px rgba(0, 212, 255, 0.6); }
+        }
+    </style>
+</head>
+<body>
+    <div class="quantum-field"></div>
+    <canvas id="canvas"></canvas>
+    <canvas id="neural-canvas" class="neural-viz" width="400" height="300"></canvas>
+    
+    <div class="controls glow">
+        <div class="control-group">
+            <label>Particle Count</label>
+            <div class="control-row">
+                <input type="range" id="particleCount" min="50" max="2000" value="500">
+                <span class="value-display" id="particleCountValue">500</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Emission Rate</label>
+            <div class="control-row">
+                <input type="range" id="emissionRate" min="1" max="50" value="15">
+                <span class="value-display" id="emissionRateValue">15</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Gravity</label>
+            <div class="control-row">
+                <input type="range" id="gravity" min="-50" max="50" value="5">
+                <span class="value-display" id="gravityValue">5</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Force Field</label>
+            <div class="control-row">
+                <input type="range" id="forceField" min="0" max="100" value="20">
+                <span class="value-display" id="forceFieldValue">20</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Size Range</label>
+            <div class="control-row">
+                <input type="range" id="sizeMin" min="1" max="10" value="2">
+                <input type="range" id="sizeMax" min="5" max="20" value="8">
+            </div>
+        </div>
+
+        <div class="preset-buttons">
+            <button onclick="loadPreset('fireworks')">Fireworks</button>
+            <button onclick="loadPreset('galaxy')">Galaxy</button>
+            <button onclick="loadPreset('rain')">Rain</button>
+            <button onclick="loadPreset('explosion')">Explosion</button>
+            <button onclick="loadPreset('neural')">Neural Net</button>
+            <button onclick="loadPreset('quantum')">Quantum</button>
+            <button onclick="loadPreset('dna')">DNA Helix</button>
+            <button onclick="loadPreset('fluid')">Fluid Sim</button>
+        </div>
+
+        <div class="control-group">
+            <button onclick="togglePause()">Pause/Resume</button>
+            <button onclick="clearParticles()">Clear</button>
+        </div>
+
+        <div class="data-input">
+            <label>Data Input (JSON Array)</label>
+            <textarea id="dataInput" placeholder='[{"value": 10, "x": 0.5, "y": 0.3}, {"value": 25, "x": 0.8, "y": 0.6}]'></textarea>
+            <button onclick="visualizeData()" style="margin-top: 5px; width: 100%;">Visualize Data</button>
+        </div>
+    </div>
+
+    <div class="advanced-controls glow">
+        <div class="control-group">
+            <label>🧠 AI Features</label>
+            <button onclick="toggleNeuralViz()">Neural Network</button>
+            <button onclick="enableQuantumMode()">Quantum Field</button>
+        </div>
+
+        <div class="control-group">
+            <label>⚡ Physics 2.0</label>
+            <div class="control-row">
+                <label style="font-size: 10px;">Magnetism</label>
+                <input type="range" id="magnetism" min="0" max="100" value="0">
+                <span class="value-display" id="magnetismValue">0</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="control-row">
+                <label style="font-size: 10px;">Turbulence</label>
+                <input type="range" id="turbulence" min="0" max="100" value="10">
+                <span class="value-display" id="turbulenceValue">10</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="control-row">
+                <label style="font-size: 10px;">Field Strength</label>
+                <input type="range" id="fieldStrength" min="0" max="200" value="50">
+                <span class="value-display" id="fieldStrengthValue">50</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>🎵 Audio Reactive</label>
+            <button onclick="enableAudioReactive()">Start Microphone</button>
+            <button onclick="generateSound()">Generate Tones</button>
+        </div>
+
+        <div class="control-group">
+            <label>🌊 Advanced Modes</label>
+            <button onclick="enableFluidDynamics()">Fluid Dynamics</button>
+            <button onclick="enableSwarmAI()">Swarm Intelligence</button>
+        </div>
+    </div>
+
+    <div class="api-info">
+        <strong>🚀 Advanced Particle Engine API</strong><br>
+        <code>ParticleEngine.enableQuantum()</code><br>
+        <code>ParticleEngine.enableNeural()</code><br>
+        <code>ParticleEngine.createDNA()</code><br>
+        <code>ParticleEngine.audioReactive()</code><br>
+        <em>🎵 Audio reactive • 🧠 AI behaviors • ⚛️ Quantum fields</em>
+    </div>
+
+    <script>
+        class ParticleEngine {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.neuralCanvas = document.getElementById('neural-canvas');
+                this.neuralCtx = this.neuralCanvas.getContext('2d');
+                this.particles = [];
+                this.mouse = { x: 0, y: 0, down: false };
+                this.paused = false;
+                this.zoom = 1;
+                this.time = 0;
+                this.audioContext = null;
+                this.audioData = new Uint8Array(256);
+                this.magneticNodes = [];
+                this.swarmTargets = [];
+                this.quantumField = [];
+                this.neuralNetwork = { nodes: [], connections: [] };
+                
+                // Advanced physics properties
+                this.config = {
+                    maxParticles: 500,
+                    emissionRate: 15,
+                    gravity: 0.05,
+                    forceField: 0.2,
+                    magnetism: 0,
+                    turbulence: 0.1,
+                    fieldStrength: 0.5,
+                    sizeMin: 2,
+                    sizeMax: 8,
+                    lifespan: 300,
+                    colors: ['#ff006e', '#8338ec', '#3a86ff', '#00d4ff', '#06ffa5'],
+                    blendMode: 'screen',
+                    quantumMode: false,
+                    neuralMode: false,
+                    fluidMode: false,
+                    swarmMode: false,
+                    audioReactive: false
+                };
+
+                this.initializeAdvancedSystems();
+                this.setupCanvas();
+                this.setupEventListeners();
+                this.animate();
+            }
+
+            initializeAdvancedSystems() {
+                // Initialize quantum field grid
+                for (let x = 0; x < 20; x++) {
+                    this.quantumField[x] = [];
+                    for (let y = 0; y < 15; y++) {
+                        this.quantumField[x][y] = {
+                            energy: Math.random(),
+                            phase: Math.random() * Math.PI * 2,
+                            frequency: 0.01 + Math.random() * 0.05
+                        };
+                    }
+                }
+
+                // Initialize neural network
+                for (let i = 0; i < 15; i++) {
+                    this.neuralNetwork.nodes.push({
+                        x: Math.random() * 400,
+                        y: Math.random() * 300,
+                        activation: Math.random(),
+                        connections: []
+                    });
+                }
+
+                // Create neural connections
+                this.neuralNetwork.nodes.forEach((node, i) => {
+                    const connections = Math.floor(Math.random() * 5) + 2;
+                    for (let j = 0; j < connections; j++) {
+                        const target = Math.floor(Math.random() * this.neuralNetwork.nodes.length);
+                        if (target !== i) {
+                            node.connections.push({
+                                target: target,
+                                weight: (Math.random() - 0.5) * 2,
+                                activity: 0
+                            });
+                        }
+                    }
+                });
+
+                // Initialize magnetic nodes
+                for (let i = 0; i < 5; i++) {
+                    this.magneticNodes.push({
+                        x: Math.random() * window.innerWidth,
+                        y: Math.random() * window.innerHeight,
+                        charge: (Math.random() - 0.5) * 2,
+                        strength: 50 + Math.random() * 100
+                    });
+                }
+            }
+
+            setupCanvas() {
+                const resize = () => {
+                    this.canvas.width = window.innerWidth;
+                    this.canvas.height = window.innerHeight;
+                };
+                resize();
+                window.addEventListener('resize', resize);
+            }
+
+            setupEventListeners() {
+                this.canvas.addEventListener('mousemove', (e) => {
+                    this.mouse.x = e.clientX;
+                    this.mouse.y = e.clientY;
+                });
+
+                this.canvas.addEventListener('mousedown', (e) => {
+                    this.mouse.down = true;
+                    this.createExplosion(e.clientX, e.clientY, 50);
+                });
+
+                this.canvas.addEventListener('mouseup', () => {
+                    this.mouse.down = false;
+                });
+
+                this.canvas.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    this.zoom += e.deltaY * -0.001;
+                    this.zoom = Math.max(0.5, Math.min(3, this.zoom));
+                });
+            }
+
+            createParticle(x, y, options = {}) {
+                if (this.particles.length >= this.config.maxParticles) {
+                    this.particles.shift();
+                }
+
+                const particle = {
+                    x: x || Math.random() * this.canvas.width,
+                    y: y || Math.random() * this.canvas.height,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    size: this.config.sizeMin + Math.random() * (this.config.sizeMax - this.config.sizeMin),
+                    baseSize: this.config.sizeMin + Math.random() * (this.config.sizeMax - this.config.sizeMin),
+                    life: this.config.lifespan,
+                    maxLife: this.config.lifespan,
+                    color: options.color || this.config.colors[Math.floor(Math.random() * this.config.colors.length)],
+                    mass: 1 + Math.random() * 2,
+                    trail: [],
+                    charge: (Math.random() - 0.5) * 2,
+                    frequency: 0.01 + Math.random() * 0.1,
+                    phase: Math.random() * Math.PI * 2,
+                    ...options
+                };
+
+                this.particles.push(particle);
+                return particle;
+            }
+
+            updateParticle(p) {
+                this.time += 0.016;
+
+                // Apply gravity
+                p.vy += this.config.gravity * 0.01;
+
+                // Quantum field effects
+                if (this.config.quantumMode) {
+                    const fieldX = Math.floor((p.x / this.canvas.width) * 19);
+                    const fieldY = Math.floor((p.y / this.canvas.height) * 14);
+                    if (this.quantumField[fieldX] && this.quantumField[fieldX][fieldY]) {
+                        const field = this.quantumField[fieldX][fieldY];
+                        const quantumForce = Math.sin(this.time * field.frequency + field.phase) * field.energy * 0.5;
+                        p.vx += quantumForce;
+                        p.vy += quantumForce * 0.5;
+                    }
+                }
+
+                // Magnetic field interactions
+                if (this.config.magnetism > 0) {
+                    this.magneticNodes.forEach(node => {
+                        const dx = node.x - p.x;
+                        const dy = node.y - p.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        if (distance < node.strength) {
+                            const force = (node.charge * this.config.magnetism * 0.001) / (distance + 1);
+                            p.vx += (dx / distance) * force;
+                            p.vy += (dy / distance) * force;
+                        }
+                    });
+                }
+
+                // Turbulence noise
+                if (this.config.turbulence > 0) {
+                    const noiseX = Math.sin(p.x * 0.01 + this.time * 0.5) * this.config.turbulence * 0.01;
+                    const noiseY = Math.cos(p.y * 0.01 + this.time * 0.3) * this.config.turbulence * 0.01;
+                    p.vx += noiseX;
+                    p.vy += noiseY;
+                }
+
+                // Swarm intelligence
+                if (this.config.swarmMode) {
+                    this.applySwarmBehavior(p);
+                }
+
+                // Fluid dynamics
+                if (this.config.fluidMode) {
+                    this.applyFluidForces(p);
+                }
+
+                // Audio reactive effects
+                if (this.config.audioReactive && this.audioData) {
+                    const freqIndex = Math.floor((p.x / this.canvas.width) * this.audioData.length);
+                    const amplitude = this.audioData[freqIndex] / 255;
+                    p.size = p.baseSize * (1 + amplitude * 2);
+                    p.vx += (amplitude - 0.5) * 0.1;
+                }
+
+                // Mouse interaction
+                const dx = this.mouse.x - p.x;
+                const dy = this.mouse.y - p.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < 200) {
+                    const force = (200 - distance) / 200 * this.config.forceField * 0.01;
+                    p.vx += (dx / distance) * force;
+                    p.vy += (dy / distance) * force;
+                }
+
+                // Update position
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Add to trail
+                p.trail.push({ x: p.x, y: p.y });
+                if (p.trail.length > (this.config.fluidMode ? 20 : 10)) p.trail.shift();
+
+                // Boundary conditions
+                if (p.x < 0 || p.x > this.canvas.width) p.vx *= -0.8;
+                if (p.y < 0 || p.y > this.canvas.height) p.vy *= -0.8;
+                
+                p.x = Math.max(0, Math.min(this.canvas.width, p.x));
+                p.y = Math.max(0, Math.min(this.canvas.height, p.y));
+
+                // Update life
+                p.life--;
+                
+                return p.life > 0;
+            }
+
+            applySwarmBehavior(p) {
+                let alignmentX = 0, alignmentY = 0;
+                let cohesionX = 0, cohesionY = 0;
+                let separationX = 0, separationY = 0;
+                let neighbors = 0;
+
+                this.particles.forEach(other => {
+                    if (other === p) return;
+                    const dx = other.x - p.x;
+                    const dy = other.y - p.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < 100) {
+                        neighbors++;
+                        alignmentX += other.vx;
+                        alignmentY += other.vy;
+                        cohesionX += other.x;
+                        cohesionY += other.y;
+
+                        if (distance < 30) {
+                            separationX -= dx / distance;
+                            separationY -= dy / distance;
+                        }
+                    }
+                });
+
+                if (neighbors > 0) {
+                    alignmentX /= neighbors;
+                    alignmentY /= neighbors;
+                    cohesionX /= neighbors;
+                    cohesionY /= neighbors;
+
+                    p.vx += (alignmentX - p.vx) * 0.05;
+                    p.vy += (alignmentY - p.vy) * 0.05;
+                    p.vx += (cohesionX - p.x) * 0.001;
+                    p.vy += (cohesionY - p.y) * 0.001;
+                    p.vx += separationX * 0.1;
+                    p.vy += separationY * 0.1;
+                }
+            }
+
+            applyFluidForces(p) {
+                const viscosity = 0.98;
+                p.vx *= viscosity;
+                p.vy *= viscosity;
+
+                // Pressure simulation
+                this.particles.forEach(other => {
+                    if (other === p) return;
+                    const dx = other.x - p.x;
+                    const dy = other.y - p.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < 20 && distance > 0) {
+                        const pressure = (20 - distance) / 20;
+                        p.vx -= (dx / distance) * pressure * 0.1;
+                        p.vy -= (dy / distance) * pressure * 0.1;
+                    }
+                });
+            }
+
+            renderParticle(p) {
+                const alpha = p.life / p.maxLife;
+                const size = p.size * alpha * this.zoom;
+                
+                this.ctx.globalCompositeOperation = this.config.blendMode;
+                
+                // Draw trail
+                if (p.trail.length > 1) {
+                    this.ctx.strokeStyle = p.color + '30';
+                    this.ctx.lineWidth = size * 0.3;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(p.trail[0].x, p.trail[0].y);
+                    for (let i = 1; i < p.trail.length; i++) {
+                        this.ctx.lineTo(p.trail[i].x, p.trail[i].y);
+                    }
+                    this.ctx.stroke();
+                }
+
+                // Draw glow
+                const gradient = this.ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 2);
+                gradient.addColorStop(0, p.color + Math.floor(alpha * 255).toString(16).padStart(2, '0'));
+                gradient.addColorStop(0.5, p.color + '40');
+                gradient.addColorStop(1, p.color + '00');
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, size * 2, 0, Math.PI * 2);
+                this.ctx.fill();
+
+                // Draw core
+                this.ctx.fillStyle = p.color;
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+
+            createExplosion(x, y, count) {
+                for (let i = 0; i < count; i++) {
+                    const angle = (i / count) * Math.PI * 2;
+                    const velocity = 2 + Math.random() * 6;
+                    this.createParticle(x, y, {
+                        vx: Math.cos(angle) * velocity,
+                        vy: Math.sin(angle) * velocity,
+                        size: 3 + Math.random() * 8,
+                        life: 100 + Math.random() * 200
+                    });
+                }
+            }
+
+            animate() {
+                if (!this.paused) {
+                    // Update quantum field
+                    if (this.config.quantumMode) {
+                        this.updateQuantumField();
+                    }
+
+                    // Update neural network
+                    if (this.config.neuralMode) {
+                        this.updateNeuralNetwork();
+                        this.renderNeuralNetwork();
+                    }
+
+                    // Clear canvas with fade effect
+                    this.ctx.globalCompositeOperation = 'source-over';
+                    this.ctx.fillStyle = this.config.fluidMode ? 'rgba(0, 0, 0, 0.02)' : 'rgba(0, 0, 0, 0.05)';
+                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                    // Emit new particles
+                    if (Math.random() < this.config.emissionRate / 100) {
+                        this.createParticle();
+                    }
+
+                    // Update and render particles
+                    this.particles = this.particles.filter(p => {
+                        if (this.updateParticle(p)) {
+                            this.renderParticle(p);
+                            return true;
+                        }
+                        return false;
+                    });
+
+                    // Render quantum field visualization
+                    if (this.config.quantumMode) {
+                        this.renderQuantumField();
+                    }
+
+                    // Render magnetic field lines
+                    if (this.config.magnetism > 0) {
+                        this.renderMagneticField();
+                    }
+                }
+
+                requestAnimationFrame(() => this.animate());
+            }
+
+            updateQuantumField() {
+                for (let x = 0; x < 20; x++) {
+                    for (let y = 0; y < 15; y++) {
+                        const field = this.quantumField[x][y];
+                        field.phase += field.frequency;
+                        field.energy = 0.5 + 0.5 * Math.sin(field.phase);
+                    }
+                }
+            }
+
+            renderQuantumField() {
+                this.ctx.globalCompositeOperation = 'screen';
+                for (let x = 0; x < 19; x++) {
+                    for (let y = 0; y < 14; y++) {
+                        const field = this.quantumField[x][y];
+                        const screenX = (x / 19) * this.canvas.width;
+                        const screenY = (y / 14) * this.canvas.height;
+                        
+                        this.ctx.fillStyle = `rgba(0, 212, 255, ${field.energy * 0.1})`;
+                        this.ctx.fillRect(screenX, screenY, this.canvas.width / 19, this.canvas.height / 14);
+                    }
+                }
+            }
+
+            renderMagneticField() {
+                this.ctx.globalCompositeOperation = 'screen';
+                this.ctx.strokeStyle = 'rgba(255, 0, 110, 0.2)';
+                this.ctx.lineWidth = 1;
+
+                this.magneticNodes.forEach(node => {
+                    for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 8) {
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(node.x, node.y);
+                        const endX = node.x + Math.cos(angle) * node.strength;
+                        const endY = node.y + Math.sin(angle) * node.strength;
+                        this.ctx.lineTo(endX, endY);
+                        this.ctx.stroke();
+                    }
+                });
+            }
+
+            updateNeuralNetwork() {
+                // Propagate signals through network
+                this.neuralNetwork.nodes.forEach(node => {
+                    node.activation *= 0.95; // Decay
+                    
+                    node.connections.forEach(conn => {
+                        const target = this.neuralNetwork.nodes[conn.target];
+                        if (node.activation > 0.5) {
+                            conn.activity = Math.min(1, conn.activity + 0.1);
+                            target.activation += conn.weight * conn.activity * 0.1;
+                        } else {
+                            conn.activity *= 0.9;
+                        }
+                    });
+
+                    // Random activation spikes
+                    if (Math.random() < 0.01) {
+                        node.activation = 1;
+                    }
+                });
+            }
+
+            renderNeuralNetwork() {
+                this.neuralCtx.clearRect(0, 0, 400, 300);
+                this.neuralCtx.globalCompositeOperation = 'screen';
+
+                // Draw connections
+                this.neuralNetwork.nodes.forEach((node, i) => {
+                    node.connections.forEach(conn => {
+                        const target = this.neuralNetwork.nodes[conn.target];
+                        this.neuralCtx.strokeStyle = `rgba(131, 56, 236, ${conn.activity * 0.5})`;
+                        this.neuralCtx.lineWidth = conn.activity * 3;
+                        this.neuralCtx.beginPath();
+                        this.neuralCtx.moveTo(node.x, node.y);
+                        this.neuralCtx.lineTo(target.x, target.y);
+                        this.neuralCtx.stroke();
+                    });
+                });
+
+                // Draw nodes
+                this.neuralNetwork.nodes.forEach(node => {
+                    const size = 5 + node.activation * 10;
+                    this.neuralCtx.fillStyle = `rgba(0, 212, 255, ${node.activation})`;
+                    this.neuralCtx.beginPath();
+                    this.neuralCtx.arc(node.x, node.y, size, 0, Math.PI * 2);
+                    this.neuralCtx.fill();
+                });
+            }
+
+            // Public API methods
+            addParticles(data) {
+                data.forEach(item => {
+                    const x = item.x * this.canvas.width;
+                    const y = item.y * this.canvas.height;
+                    const count = Math.max(1, Math.floor(item.value / 5));
+                    
+                    for (let i = 0; i < count; i++) {
+                        this.createParticle(x + (Math.random() - 0.5) * 50, y + (Math.random() - 0.5) * 50, {
+                            size: Math.max(2, item.value / 10),
+                            color: item.color || this.config.colors[Math.floor(Math.random() * this.config.colors.length)]
+                        });
+                    }
+                });
+            }
+
+            configure(options) {
+                Object.assign(this.config, options);
+            }
+
+            setPreset(name) {
+                const presets = {
+                    fireworks: {
+                        gravity: -0.02,
+                        forceField: 0.1,
+                        emissionRate: 25,
+                        colors: ['#ff006e', '#ff8500', '#ffb700', '#fff700'],
+                        blendMode: 'screen'
+                    },
+                    galaxy: {
+                        gravity: 0.001,
+                        forceField: 0.8,
+                        emissionRate: 30,
+                        colors: ['#8338ec', '#3a86ff', '#06ffa5', '#ffffff'],
+                        blendMode: 'screen'
+                    },
+                    rain: {
+                        gravity: 0.1,
+                        forceField: 0.05,
+                        emissionRate: 40,
+                        colors: ['#3a86ff', '#06ffa5', '#ffffff'],
+                        blendMode: 'source-over'
+                    },
+                    explosion: {
+                        gravity: 0.03,
+                        forceField: 0.3,
+                        emissionRate: 50,
+                        colors: ['#ff006e', '#ff4500', '#ffb700'],
+                        blendMode: 'screen'
+                    }
+                };
+
+                if (presets[name]) {
+                    this.configure(presets[name]);
+                }
+            }
+
+            // Advanced feature methods
+            enableAudioReactive() {
+                if (!this.audioContext) {
+                    navigator.mediaDevices.getUserMedia({ audio: true })
+                        .then(stream => {
+                            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                            const analyser = this.audioContext.createAnalyser();
+                            const source = this.audioContext.createMediaStreamSource(stream);
+                            source.connect(analyser);
+                            analyser.fftSize = 512;
+                            this.audioData = new Uint8Array(analyser.frequencyBinCount);
+                            
+                            const updateAudio = () => {
+                                analyser.getByteFrequencyData(this.audioData);
+                                requestAnimationFrame(updateAudio);
+                            };
+                            updateAudio();
+                            
+                            this.config.audioReactive = true;
+                        })
+                        .catch(e => console.log('Audio access denied'));
+                }
+            }
+
+            generateTones() {
+                if (!this.audioContext) {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                // Generate harmonic tones that affect particles
+                const frequencies = [220, 330, 440, 660];
+                frequencies.forEach((freq, i) => {
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    oscillator.frequency.setValueAtTime(freq, this.audioContext.currentTime);
+                    oscillator.type = 'sine';
+                    gainNode.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 2);
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    oscillator.start();
+                    oscillator.stop(this.audioContext.currentTime + 2);
+                    
+                    // Create visual response
+                    setTimeout(() => {
+                        this.createExplosion(
+                            this.canvas.width * (i + 1) / 5,
+                            this.canvas.height * 0.5,
+                            30
+                        );
+                    }, i * 500);
+                });
+            }
+
+            createDNAHelix() {
+                const centerX = this.canvas.width / 2;
+                const centerY = this.canvas.height / 2;
+                const radius = 100;
+                const height = 300;
+                
+                for (let i = 0; i < 50; i++) {
+                    const t = (i / 50) * Math.PI * 4;
+                    const y = centerY - height/2 + (i / 50) * height;
+                    
+                    // Double helix structure
+                    const x1 = centerX + Math.cos(t) * radius;
+                    const x2 = centerX + Math.cos(t + Math.PI) * radius;
+                    
+                    this.createParticle(x1, y, {
+                        color: '#06ffa5',
+                        size: 4,
+                        vx: Math.cos(t) * 0.5,
+                        vy: -0.5
+                    });
+                    
+                    this.createParticle(x2, y, {
+                        color: '#00d4ff',
+                        size: 4,
+                        vx: Math.cos(t + Math.PI) * 0.5,
+                        vy: -0.5
+                    });
+                    
+                    // Cross-links
+                    if (i % 5 === 0) {
+                        const steps = 5;
+                        for (let j = 0; j < steps; j++) {
+                            const linkX = x1 + (x2 - x1) * (j / steps);
+                            this.createParticle(linkX, y, {
+                                color: '#ffffff',
+                                size: 2,
+                                vx: 0,
+                                vy: -0.3
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        // Initialize engine
+        const canvas = document.getElementById('canvas');
+        const engine = new ParticleEngine(canvas);
+
+        // Expose global API
+        window.ParticleEngine = {
+            addParticles: (data) => engine.addParticles(data),
+            configure: (options) => engine.configure(options),
+            setPreset: (name) => engine.setPreset(name),
+            pause: () => engine.pause(),
+            resume: () => engine.resume(),
+            clear: () => engine.clear()
+        };
+
+        // Control panel functionality
+        function updateControls() {
+            const controls = {
+                particleCount: (val) => engine.configure({ maxParticles: parseInt(val) }),
+                emissionRate: (val) => engine.configure({ emissionRate: parseInt(val) }),
+                gravity: (val) => engine.configure({ gravity: parseFloat(val) * 0.001 }),
+                forceField: (val) => engine.configure({ forceField: parseFloat(val) * 0.01 }),
+                sizeMin: (val) => engine.configure({ sizeMin: parseInt(val) }),
+                sizeMax: (val) => engine.configure({ sizeMax: parseInt(val) }),
+                magnetism: (val) => engine.configure({ magnetism: parseFloat(val) }),
+                turbulence: (val) => engine.configure({ turbulence: parseFloat(val) * 0.01 }),
+                fieldStrength: (val) => engine.configure({ fieldStrength: parseFloat(val) * 0.01 })
+            };
+
+            Object.keys(controls).forEach(id => {
+                const slider = document.getElementById(id);
+                const display = document.getElementById(id + 'Value');
+                
+                if (slider && display) {
+                    slider.addEventListener('input', (e) => {
+                        display.textContent = e.target.value;
+                        controls[id](e.target.value);
+                    });
+                }
+            });
+        }
+
+        function loadPreset(name) {
+            engine.setPreset(name);
+            if (name === 'dna') {
+                setTimeout(() => engine.createDNAHelix(), 500);
+            }
+            engine.clear();
+        }
+
+        function togglePause() {
+            if (engine.paused) {
+                engine.resume();
+            } else {
+                engine.pause();
+            }
+        }
+
+        function clearParticles() {
+            engine.clear();
+        }
+
+        function visualizeData() {
+            const input = document.getElementById('dataInput').value.trim();
+            if (!input) return;
+
+            try {
+                const data = JSON.parse(input);
+                engine.addParticles(data);
+            } catch (e) {
+                alert('Invalid JSON format. Please check your data input.');
+            }
+        }
+
+        // Initialize controls
+        updateControls();
+
+        // Demo data visualization
+        setTimeout(() => {
+            const demoData = [
+                { value: 30, x: 0.2, y: 0.3, color: '#ff006e' },
+                { value: 45, x: 0.5, y: 0.4, color: '#8338ec' },
+                { value: 25, x: 0.8, y: 0.6, color: '#3a86ff' },
+                { value: 60, x: 0.3, y: 0.7, color: '#06ffa5' }
+            ];
+            engine.addParticles(demoData);
+        }, 2000);
+    </script>
+</body>
+</html>

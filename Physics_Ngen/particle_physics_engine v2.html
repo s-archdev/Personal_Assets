@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Particle Physics Engine</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #canvas {
+            display: block;
+            background: radial-gradient(circle at center, rgba(0,20,40,0.8) 0%, rgba(0,0,0,0.95) 100%);
+            cursor: crosshair;
+        }
+
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            color: white;
+            font-size: 12px;
+            max-width: 320px;
+            z-index: 1000;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #00d4ff;
+            font-weight: bold;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 4px;
+            background: linear-gradient(to right, #ff006e, #8338ec, #3a86ff);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #00d4ff;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .value-display {
+            min-width: 40px;
+            text-align: right;
+            color: #00d4ff;
+            font-weight: bold;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .data-input {
+            margin-top: 15px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            padding: 8px;
+            font-size: 11px;
+            resize: vertical;
+        }
+
+        .api-info {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 15px;
+            color: white;
+            font-size: 10px;
+            max-width: 300px;
+        }
+
+        .glow {
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 20px rgba(0, 212, 255, 0.2); }
+            to { box-shadow: 0 0 30px rgba(0, 212, 255, 0.6); }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    
+    <div class="controls glow">
+        <div class="control-group">
+            <label>Particle Count</label>
+            <div class="control-row">
+                <input type="range" id="particleCount" min="50" max="2000" value="500">
+                <span class="value-display" id="particleCountValue">500</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Emission Rate</label>
+            <div class="control-row">
+                <input type="range" id="emissionRate" min="1" max="50" value="15">
+                <span class="value-display" id="emissionRateValue">15</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Gravity</label>
+            <div class="control-row">
+                <input type="range" id="gravity" min="-50" max="50" value="5">
+                <span class="value-display" id="gravityValue">5</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Force Field</label>
+            <div class="control-row">
+                <input type="range" id="forceField" min="0" max="100" value="20">
+                <span class="value-display" id="forceFieldValue">20</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Size Range</label>
+            <div class="control-row">
+                <input type="range" id="sizeMin" min="1" max="10" value="2">
+                <input type="range" id="sizeMax" min="5" max="20" value="8">
+            </div>
+        </div>
+
+        <div class="preset-buttons">
+            <button onclick="loadPreset('fireworks')">Fireworks</button>
+            <button onclick="loadPreset('galaxy')">Galaxy</button>
+            <button onclick="loadPreset('rain')">Rain</button>
+            <button onclick="loadPreset('explosion')">Explosion</button>
+        </div>
+
+        <div class="control-group">
+            <button onclick="togglePause()">Pause/Resume</button>
+            <button onclick="clearParticles()">Clear</button>
+        </div>
+
+        <div class="data-input">
+            <label>Data Input (JSON Array)</label>
+            <textarea id="dataInput" placeholder='[{"value": 10, "x": 0.5, "y": 0.3}, {"value": 25, "x": 0.8, "y": 0.6}]'></textarea>
+            <button onclick="visualizeData()" style="margin-top: 5px; width: 100%;">Visualize Data</button>
+        </div>
+    </div>
+
+    <div class="api-info">
+        <strong>🚀 Particle Engine API</strong><br>
+        <code>window.ParticleEngine.addParticles(data)</code><br>
+        <code>window.ParticleEngine.setPreset(name)</code><br>
+        <code>window.ParticleEngine.configure(options)</code><br>
+        <em>Click/drag to interact • Mouse wheel to zoom</em>
+    </div>
+
+    <script>
+        class ParticleEngine {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.particles = [];
+                this.mouse = { x: 0, y: 0, down: false };
+                this.paused = false;
+                this.zoom = 1;
+                
+                // Physics properties
+                this.config = {
+                    maxParticles: 500,
+                    emissionRate: 15,
+                    gravity: 0.05,
+                    forceField: 0.2,
+                    sizeMin: 2,
+                    sizeMax: 8,
+                    lifespan: 300,
+                    colors: ['#ff006e', '#8338ec', '#3a86ff', '#00d4ff', '#06ffa5'],
+                    blendMode: 'screen'
+                };
+
+                this.setupCanvas();
+                this.setupEventListeners();
+                this.animate();
+            }
+
+            setupCanvas() {
+                const resize = () => {
+                    this.canvas.width = window.innerWidth;
+                    this.canvas.height = window.innerHeight;
+                };
+                resize();
+                window.addEventListener('resize', resize);
+            }
+
+            setupEventListeners() {
+                this.canvas.addEventListener('mousemove', (e) => {
+                    this.mouse.x = e.clientX;
+                    this.mouse.y = e.clientY;
+                });
+
+                this.canvas.addEventListener('mousedown', (e) => {
+                    this.mouse.down = true;
+                    this.createExplosion(e.clientX, e.clientY, 50);
+                });
+
+                this.canvas.addEventListener('mouseup', () => {
+                    this.mouse.down = false;
+                });
+
+                this.canvas.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    this.zoom += e.deltaY * -0.001;
+                    this.zoom = Math.max(0.5, Math.min(3, this.zoom));
+                });
+            }
+
+            createParticle(x, y, options = {}) {
+                if (this.particles.length >= this.config.maxParticles) {
+                    this.particles.shift();
+                }
+
+                const particle = {
+                    x: x || Math.random() * this.canvas.width,
+                    y: y || Math.random() * this.canvas.height,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    size: this.config.sizeMin + Math.random() * (this.config.sizeMax - this.config.sizeMin),
+                    life: this.config.lifespan,
+                    maxLife: this.config.lifespan,
+                    color: options.color || this.config.colors[Math.floor(Math.random() * this.config.colors.length)],
+                    mass: 1 + Math.random() * 2,
+                    trail: [],
+                    ...options
+                };
+
+                this.particles.push(particle);
+                return particle;
+            }
+
+            updateParticle(p) {
+                // Apply gravity
+                p.vy += this.config.gravity * 0.01;
+
+                // Mouse interaction
+                const dx = this.mouse.x - p.x;
+                const dy = this.mouse.y - p.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < 200) {
+                    const force = (200 - distance) / 200 * this.config.forceField * 0.01;
+                    p.vx += (dx / distance) * force;
+                    p.vy += (dy / distance) * force;
+                }
+
+                // Update position
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Add to trail
+                p.trail.push({ x: p.x, y: p.y });
+                if (p.trail.length > 10) p.trail.shift();
+
+                // Boundary conditions
+                if (p.x < 0 || p.x > this.canvas.width) p.vx *= -0.8;
+                if (p.y < 0 || p.y > this.canvas.height) p.vy *= -0.8;
+                
+                p.x = Math.max(0, Math.min(this.canvas.width, p.x));
+                p.y = Math.max(0, Math.min(this.canvas.height, p.y));
+
+                // Update life
+                p.life--;
+                
+                return p.life > 0;
+            }
+
+            renderParticle(p) {
+                const alpha = p.life / p.maxLife;
+                const size = p.size * alpha * this.zoom;
+                
+                this.ctx.globalCompositeOperation = this.config.blendMode;
+                
+                // Draw trail
+                if (p.trail.length > 1) {
+                    this.ctx.strokeStyle = p.color + '30';
+                    this.ctx.lineWidth = size * 0.3;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(p.trail[0].x, p.trail[0].y);
+                    for (let i = 1; i < p.trail.length; i++) {
+                        this.ctx.lineTo(p.trail[i].x, p.trail[i].y);
+                    }
+                    this.ctx.stroke();
+                }
+
+                // Draw glow
+                const gradient = this.ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 2);
+                gradient.addColorStop(0, p.color + Math.floor(alpha * 255).toString(16).padStart(2, '0'));
+                gradient.addColorStop(0.5, p.color + '40');
+                gradient.addColorStop(1, p.color + '00');
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, size * 2, 0, Math.PI * 2);
+                this.ctx.fill();
+
+                // Draw core
+                this.ctx.fillStyle = p.color;
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+
+            createExplosion(x, y, count) {
+                for (let i = 0; i < count; i++) {
+                    const angle = (i / count) * Math.PI * 2;
+                    const velocity = 2 + Math.random() * 6;
+                    this.createParticle(x, y, {
+                        vx: Math.cos(angle) * velocity,
+                        vy: Math.sin(angle) * velocity,
+                        size: 3 + Math.random() * 8,
+                        life: 100 + Math.random() * 200
+                    });
+                }
+            }
+
+            animate() {
+                if (!this.paused) {
+                    // Clear canvas with fade effect
+                    this.ctx.globalCompositeOperation = 'source-over';
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                    // Emit new particles
+                    if (Math.random() < this.config.emissionRate / 100) {
+                        this.createParticle();
+                    }
+
+                    // Update and render particles
+                    this.particles = this.particles.filter(p => {
+                        if (this.updateParticle(p)) {
+                            this.renderParticle(p);
+                            return true;
+                        }
+                        return false;
+                    });
+                }
+
+                requestAnimationFrame(() => this.animate());
+            }
+
+            // Public API methods
+            addParticles(data) {
+                data.forEach(item => {
+                    const x = item.x * this.canvas.width;
+                    const y = item.y * this.canvas.height;
+                    const count = Math.max(1, Math.floor(item.value / 5));
+                    
+                    for (let i = 0; i < count; i++) {
+                        this.createParticle(x + (Math.random() - 0.5) * 50, y + (Math.random() - 0.5) * 50, {
+                            size: Math.max(2, item.value / 10),
+                            color: item.color || this.config.colors[Math.floor(Math.random() * this.config.colors.length)]
+                        });
+                    }
+                });
+            }
+
+            configure(options) {
+                Object.assign(this.config, options);
+            }
+
+            setPreset(name) {
+                const presets = {
+                    fireworks: {
+                        gravity: -0.02,
+                        forceField: 0.1,
+                        emissionRate: 25,
+                        colors: ['#ff006e', '#ff8500', '#ffb700', '#fff700'],
+                        blendMode: 'screen'
+                    },
+                    galaxy: {
+                        gravity: 0.001,
+                        forceField: 0.8,
+                        emissionRate: 30,
+                        colors: ['#8338ec', '#3a86ff', '#06ffa5', '#ffffff'],
+                        blendMode: 'screen'
+                    },
+                    rain: {
+                        gravity: 0.1,
+                        forceField: 0.05,
+                        emissionRate: 40,
+                        colors: ['#3a86ff', '#06ffa5', '#ffffff'],
+                        blendMode: 'source-over'
+                    },
+                    explosion: {
+                        gravity: 0.03,
+                        forceField: 0.3,
+                        emissionRate: 50,
+                        colors: ['#ff006e', '#ff4500', '#ffb700'],
+                        blendMode: 'screen'
+                    }
+                };
+
+                if (presets[name]) {
+                    this.configure(presets[name]);
+                }
+            }
+
+            pause() { this.paused = true; }
+            resume() { this.paused = false; }
+            clear() { this.particles = []; }
+        }
+
+        // Initialize engine
+        const canvas = document.getElementById('canvas');
+        const engine = new ParticleEngine(canvas);
+
+        // Expose global API
+        window.ParticleEngine = {
+            addParticles: (data) => engine.addParticles(data),
+            configure: (options) => engine.configure(options),
+            setPreset: (name) => engine.setPreset(name),
+            pause: () => engine.pause(),
+            resume: () => engine.resume(),
+            clear: () => engine.clear()
+        };
+
+        // Control panel functionality
+        function updateControls() {
+            const controls = {
+                particleCount: (val) => engine.configure({ maxParticles: parseInt(val) }),
+                emissionRate: (val) => engine.configure({ emissionRate: parseInt(val) }),
+                gravity: (val) => engine.configure({ gravity: parseFloat(val) * 0.001 }),
+                forceField: (val) => engine.configure({ forceField: parseFloat(val) * 0.01 }),
+                sizeMin: (val) => engine.configure({ sizeMin: parseInt(val) }),
+                sizeMax: (val) => engine.configure({ sizeMax: parseInt(val) })
+            };
+
+            Object.keys(controls).forEach(id => {
+                const slider = document.getElementById(id);
+                const display = document.getElementById(id + 'Value');
+                
+                if (slider && display) {
+                    slider.addEventListener('input', (e) => {
+                        display.textContent = e.target.value;
+                        controls[id](e.target.value);
+                    });
+                }
+            });
+        }
+
+        function loadPreset(name) {
+            engine.setPreset(name);
+            engine.clear();
+        }
+
+        function togglePause() {
+            if (engine.paused) {
+                engine.resume();
+            } else {
+                engine.pause();
+            }
+        }
+
+        function clearParticles() {
+            engine.clear();
+        }
+
+        function visualizeData() {
+            const input = document.getElementById('dataInput').value.trim();
+            if (!input) return;
+
+            try {
+                const data = JSON.parse(input);
+                engine.addParticles(data);
+            } catch (e) {
+                alert('Invalid JSON format. Please check your data input.');
+            }
+        }
+
+        // Initialize controls
+        updateControls();
+
+        // Demo data visualization
+        setTimeout(() => {
+            const demoData = [
+                { value: 30, x: 0.2, y: 0.3, color: '#ff006e' },
+                { value: 45, x: 0.5, y: 0.4, color: '#8338ec' },
+                { value: 25, x: 0.8, y: 0.6, color: '#3a86ff' },
+                { value: 60, x: 0.3, y: 0.7, color: '#06ffa5' }
+            ];
+            engine.addParticles(demoData);
+        }, 2000);
+    </script>
+</body>
+</html>
