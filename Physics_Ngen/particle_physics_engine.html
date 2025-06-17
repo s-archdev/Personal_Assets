@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Particle Physics Engine</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        #canvas {
+            display: block;
+            background: radial-gradient(circle at center, #1a1a2e 0%, #0a0a0a 100%);
+            cursor: crosshair;
+        }
+
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            max-width: 300px;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        input[type="color"] {
+            width: 40px;
+            height: 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 2px;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #357abd;
+        }
+
+        button.active {
+            background: #e74c3c;
+        }
+
+        .preset-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .audio-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            backdrop-filter: blur(10px);
+        }
+
+        #audioFile {
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    
+    <div class="controls">
+        <h3>Particle Engine</h3>
+        
+        <div class="control-group">
+            <label>Particle Count: <span id="countValue">1000</span></label>
+            <input type="range" id="particleCount" min="100" max="5000" value="1000">
+        </div>
+        
+        <div class="control-group">
+            <label>Gravity: <span id="gravityValue">0.1</span></label>
+            <input type="range" id="gravity" min="0" max="2" step="0.1" value="0.1">
+        </div>
+        
+        <div class="control-group">
+            <label>Wind: <span id="windValue">0</span></label>
+            <input type="range" id="wind" min="-1" max="1" step="0.1" value="0">
+        </div>
+        
+        <div class="control-group">
+            <label>Size: <span id="sizeValue">2</span></label>
+            <input type="range" id="particleSize" min="1" max="10" step="0.5" value="2">
+        </div>
+        
+        <div class="control-group">
+            <label>Color:</label>
+            <input type="color" id="particleColor" value="#4a90e2">
+        </div>
+        
+        <div class="control-group">
+            <label>Behaviors:</label>
+            <button id="attractMode">Attract</button>
+            <button id="repelMode">Repel</button>
+            <button id="orbitMode">Orbit</button>
+            <button id="flowMode">Flow</button>
+        </div>
+        
+        <div class="control-group">
+            <label>Presets:</label>
+            <div class="preset-buttons">
+                <button onclick="loadPreset('fireworks')">Fireworks</button>
+                <button onclick="loadPreset('galaxy')">Galaxy</button>
+                <button onclick="loadPreset('rain')">Rain</button>
+                <button onclick="loadPreset('snow')">Snow</button>
+                <button onclick="loadPreset('plasma')">Plasma</button>
+            </div>
+        </div>
+        
+        <button onclick="clearParticles()">Clear</button>
+        <button onclick="resetEngine()">Reset</button>
+    </div>
+    
+    <div class="audio-controls">
+        <h4>Audio Reactive</h4>
+        <input type="file" id="audioFile" accept="audio/*">
+        <button id="playPause">Play</button>
+        <button onclick="toggleAudioReactive()">Audio Reactive</button>
+        <div style="margin-top: 10px;">
+            <label>Sensitivity: <span id="sensitivityValue">1</span></label>
+            <input type="range" id="sensitivity" min="0.1" max="3" step="0.1" value="1">
+        </div>
+    </div>
+    
+    <div class="stats">
+        <div>Particles: <span id="particleCountStat">0</span></div>
+        <div>FPS: <span id="fps">0</span></div>
+        <div>Audio Level: <span id="audioLevel">0</span></div>
+    </div>
+
+    <script>
+        class ParticleEngine {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.particles = [];
+                this.mouse = { x: 0, y: 0 };
+                this.mode = 'none';
+                this.audioReactive = false;
+                this.audioData = null;
+                this.audioLevel = 0;
+                
+                this.config = {
+                    particleCount: 1000,
+                    gravity: 0.1,
+                    wind: 0,
+                    size: 2,
+                    color: '#4a90e2',
+                    attraction: 0.5,
+                    repulsion: 0.5,
+                    friction: 0.98,
+                    maxSpeed: 5,
+                    trailLength: 0.1
+                };
+                
+                this.resize();
+                this.setupEventListeners();
+                this.initParticles();
+                this.animate();
+                
+                // FPS counter
+                this.fps = 0;
+                this.frameCount = 0;
+                this.lastTime = Date.now();
+            }
+            
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+            
+            setupEventListeners() {
+                window.addEventListener('resize', () => this.resize());
+                
+                this.canvas.addEventListener('mousemove', (e) => {
+                    this.mouse.x = e.clientX;
+                    this.mouse.y = e.clientY;
+                });
+                
+                this.canvas.addEventListener('click', (e) => {
+                    this.addParticles(e.clientX, e.clientY, 50);
+                });
+            }
+            
+            initParticles() {
+                this.particles = [];
+                for (let i = 0; i < this.config.particleCount; i++) {
+                    this.particles.push(this.createParticle());
+                }
+            }
+            
+            createParticle(x, y) {
+                return {
+                    x: x || Math.random() * this.canvas.width,
+                    y: y || Math.random() * this.canvas.height,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    life: 1.0,
+                    maxLife: 0.5 + Math.random() * 0.5,
+                    size: this.config.size * (0.5 + Math.random() * 0.5),
+                    color: this.config.color,
+                    type: Math.random() > 0.8 ? 'spark' : 'normal',
+                    angle: Math.random() * Math.PI * 2,
+                    angularVelocity: (Math.random() - 0.5) * 0.1,
+                    trail: []
+                };
+            }
+            
+            addParticles(x, y, count) {
+                for (let i = 0; i < count; i++) {
+                    const particle = this.createParticle(x, y);
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 3 + 1;
+                    particle.vx = Math.cos(angle) * speed;
+                    particle.vy = Math.sin(angle) * speed;
+                    this.particles.push(particle);
+                }
+            }
+            
+            updateParticles() {
+                const audioMultiplier = this.audioReactive ? (1 + this.audioLevel * 2) : 1;
+                
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    
+                    // Store trail
+                    p.trail.push({ x: p.x, y: p.y });
+                    if (p.trail.length > 10) p.trail.shift();
+                    
+                    // Apply forces based on mode
+                    if (this.mode === 'attract') {
+                        const dx = this.mouse.x - p.x;
+                        const dy = this.mouse.y - p.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        if (distance > 0) {
+                            const force = this.config.attraction / distance;
+                            p.vx += (dx / distance) * force * audioMultiplier;
+                            p.vy += (dy / distance) * force * audioMultiplier;
+                        }
+                    } else if (this.mode === 'repel') {
+                        const dx = this.mouse.x - p.x;
+                        const dy = this.mouse.y - p.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        if (distance > 0 && distance < 200) {
+                            const force = this.config.repulsion / distance;
+                            p.vx -= (dx / distance) * force * audioMultiplier;
+                            p.vy -= (dy / distance) * force * audioMultiplier;
+                        }
+                    } else if (this.mode === 'orbit') {
+                        const dx = this.mouse.x - p.x;
+                        const dy = this.mouse.y - p.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        if (distance > 0) {
+                            const force = this.config.attraction / distance;
+                            p.vx += (-dy / distance) * force * audioMultiplier;
+                            p.vy += (dx / distance) * force * audioMultiplier;
+                        }
+                    } else if (this.mode === 'flow') {
+                        const noise = Math.sin(p.x * 0.01 + Date.now() * 0.001) * 
+                                    Math.cos(p.y * 0.01 + Date.now() * 0.001);
+                        p.vx += noise * 0.1 * audioMultiplier;
+                        p.vy += Math.sin(Date.now() * 0.001 + p.x * 0.005) * 0.1 * audioMultiplier;
+                    }
+                    
+                    // Apply gravity and wind
+                    p.vy += this.config.gravity * audioMultiplier;
+                    p.vx += this.config.wind * audioMultiplier;
+                    
+                    // Apply friction
+                    p.vx *= this.config.friction;
+                    p.vy *= this.config.friction;
+                    
+                    // Limit speed
+                    const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+                    if (speed > this.config.maxSpeed) {
+                        p.vx = (p.vx / speed) * this.config.maxSpeed;
+                        p.vy = (p.vy / speed) * this.config.maxSpeed;
+                    }
+                    
+                    // Update position
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.angle += p.angularVelocity;
+                    
+                    // Audio reactive size
+                    if (this.audioReactive) {
+                        p.size = this.config.size * (1 + this.audioLevel);
+                    }
+                    
+                    // Update life
+                    p.life -= 0.005;
+                    
+                    // Boundary conditions
+                    if (p.x < 0 || p.x > this.canvas.width || 
+                        p.y < 0 || p.y > this.canvas.height || 
+                        p.life <= 0) {
+                        if (this.particles.length > this.config.particleCount) {
+                            this.particles.splice(i, 1);
+                        } else {
+                            // Respawn
+                            Object.assign(p, this.createParticle());
+                        }
+                    }
+                }
+            }
+            
+            render() {
+                // Create trailing effect
+                this.ctx.fillStyle = `rgba(10, 10, 10, ${1 - this.config.trailLength})`;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                this.ctx.save();
+                
+                for (const p of this.particles) {
+                    const alpha = p.life;
+                    
+                    // Draw trail
+                    if (p.trail.length > 1) {
+                        this.ctx.strokeStyle = `${p.color}40`;
+                        this.ctx.lineWidth = p.size * 0.5;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(p.trail[0].x, p.trail[0].y);
+                        for (let i = 1; i < p.trail.length; i++) {
+                            this.ctx.lineTo(p.trail[i].x, p.trail[i].y);
+                        }
+                        this.ctx.stroke();
+                    }
+                    
+                    // Draw particle
+                    this.ctx.save();
+                    this.ctx.translate(p.x, p.y);
+                    this.ctx.rotate(p.angle);
+                    
+                    if (p.type === 'spark') {
+                        // Draw spark
+                        this.ctx.fillStyle = `${p.color}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`;
+                        this.ctx.fillRect(-p.size, -p.size/4, p.size * 2, p.size/2);
+                        this.ctx.fillRect(-p.size/4, -p.size, p.size/2, p.size * 2);
+                    } else {
+                        // Draw normal particle with glow
+                        const gradient = this.ctx.createRadialGradient(0, 0, 0, 0, 0, p.size);
+                        gradient.addColorStop(0, `${p.color}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`);
+                        gradient.addColorStop(1, `${p.color}00`);
+                        
+                        this.ctx.fillStyle = gradient;
+                        this.ctx.beginPath();
+                        this.ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    }
+                    
+                    this.ctx.restore();
+                }
+                
+                this.ctx.restore();
+            }
+            
+            animate() {
+                this.updateParticles();
+                this.render();
+                
+                // Update FPS
+                this.frameCount++;
+                const now = Date.now();
+                if (now - this.lastTime >= 1000) {
+                    this.fps = this.frameCount;
+                    this.frameCount = 0;
+                    this.lastTime = now;
+                }
+                
+                requestAnimationFrame(() => this.animate());
+            }
+            
+            setMode(mode) {
+                this.mode = mode;
+            }
+            
+            updateConfig(key, value) {
+                this.config[key] = value;
+                if (key === 'particleCount') {
+                    this.initParticles();
+                }
+            }
+            
+            clear() {
+                this.particles = [];
+            }
+            
+            reset() {
+                this.initParticles();
+                this.mode = 'none';
+            }
+        }
+        
+        // Audio handling
+        class AudioHandler {
+            constructor() {
+                this.audioContext = null;
+                this.analyser = null;
+                this.audioElement = null;
+                this.dataArray = null;
+                this.isPlaying = false;
+            }
+            
+            async initAudio(file) {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.analyser = this.audioContext.createAnalyser();
+                    this.analyser.fftSize = 256;
+                    
+                    const bufferLength = this.analyser.frequencyBinCount;
+                    this.dataArray = new Uint8Array(bufferLength);
+                    
+                    this.audioElement = new Audio();
+                    this.audioElement.src = URL.createObjectURL(file);
+                    
+                    const source = this.audioContext.createMediaElementSource(this.audioElement);
+                    source.connect(this.analyser);
+                    this.analyser.connect(this.audioContext.destination);
+                    
+                    return true;
+                } catch (error) {
+                    console.error('Audio initialization failed:', error);
+                    return false;
+                }
+            }
+            
+            play() {
+                if (this.audioElement && this.audioContext) {
+                    if (this.audioContext.state === 'suspended') {
+                        this.audioContext.resume();
+                    }
+                    this.audioElement.play();
+                    this.isPlaying = true;
+                }
+            }
+            
+            pause() {
+                if (this.audioElement) {
+                    this.audioElement.pause();
+                    this.isPlaying = false;
+                }
+            }
+            
+            getAudioLevel() {
+                if (this.analyser && this.dataArray) {
+                    this.analyser.getByteFrequencyData(this.dataArray);
+                    
+                    let sum = 0;
+                    for (let i = 0; i < this.dataArray.length; i++) {
+                        sum += this.dataArray[i];
+                    }
+                    
+                    return (sum / this.dataArray.length) / 255;
+                }
+                return 0;
+            }
+            
+            getFrequencyData() {
+                if (this.analyser && this.dataArray) {
+                    this.analyser.getByteFrequencyData(this.dataArray);
+                    return this.dataArray;
+                }
+                return null;
+            }
+        }
+        
+        // Initialize
+        const canvas = document.getElementById('canvas');
+        const engine = new ParticleEngine(canvas);
+        const audioHandler = new AudioHandler();
+        
+        // Control handlers
+        const controls = {
+            particleCount: document.getElementById('particleCount'),
+            gravity: document.getElementById('gravity'),
+            wind: document.getElementById('wind'),
+            particleSize: document.getElementById('particleSize'),
+            particleColor: document.getElementById('particleColor'),
+            sensitivity: document.getElementById('sensitivity')
+        };
+        
+        Object.entries(controls).forEach(([key, element]) => {
+            element.addEventListener('input', (e) => {
+                const value = e.target.type === 'color' ? e.target.value : parseFloat(e.target.value);
+                engine.updateConfig(key === 'particleSize' ? 'size' : key, value);
+                
+                // Update display
+                const display = document.getElementById(key + 'Value');
+                if (display) display.textContent = value;
+            });
+        });
+        
+        // Mode buttons
+        const modes = ['attract', 'repel', 'orbit', 'flow'];
+        modes.forEach(mode => {
+            const button = document.getElementById(mode + 'Mode');
+            button.addEventListener('click', () => {
+                modes.forEach(m => document.getElementById(m + 'Mode').classList.remove('active'));
+                button.classList.add('active');
+                engine.setMode(mode);
+            });
+        });
+        
+        // Audio controls
+        document.getElementById('audioFile').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const success = await audioHandler.initAudio(file);
+                if (success) {
+                    document.getElementById('playPause').textContent = 'Play';
+                }
+            }
+        });
+        
+        document.getElementById('playPause').addEventListener('click', () => {
+            if (audioHandler.isPlaying) {
+                audioHandler.pause();
+                document.getElementById('playPause').textContent = 'Play';
+            } else {
+                audioHandler.play();
+                document.getElementById('playPause').textContent = 'Pause';
+            }
+        });
+        
+        // Presets
+        const presets = {
+            fireworks: {
+                particleCount: 2000,
+                gravity: 0.3,
+                wind: 0,
+                size: 3,
+                color: '#ff6b6b',
+                trailLength: 0.05
+            },
+            galaxy: {
+                particleCount: 3000,
+                gravity: 0,
+                wind: 0,
+                size: 1,
+                color: '#4ecdc4',
+                trailLength: 0.02
+            },
+            rain: {
+                particleCount: 1500,
+                gravity: 0.5,
+                wind: 0.2,
+                size: 2,
+                color: '#74b9ff',
+                trailLength: 0.1
+            },
+            snow: {
+                particleCount: 800,
+                gravity: 0.1,
+                wind: 0.1,
+                size: 4,
+                color: '#ffffff',
+                trailLength: 0.05
+            },
+            plasma: {
+                particleCount: 2500,
+                gravity: 0,
+                wind: 0,
+                size: 2,
+                color: '#fd79a8',
+                trailLength: 0.01
+            }
+        };
+        
+        function loadPreset(name) {
+            const preset = presets[name];
+            Object.entries(preset).forEach(([key, value]) => {
+                engine.updateConfig(key, value);
+                const control = document.getElementById(key === 'size' ? 'particleSize' : key);
+                if (control && control.type !== 'color') {
+                    control.value = value;
+                    const display = document.getElementById(key + 'Value') || document.getElementById('particleSize' + 'Value');
+                    if (display) display.textContent = value;
+                } else if (control && control.type === 'color') {
+                    control.value = value;
+                }
+            });
+            
+            // Set orbit mode for galaxy
+            if (name === 'galaxy') {
+                engine.setMode('orbit');
+                document.getElementById('orbitMode').classList.add('active');
+            }
+        }
+        
+        function clearParticles() {
+            engine.clear();
+        }
+        
+        function resetEngine() {
+            engine.reset();
+            modes.forEach(m => document.getElementById(m + 'Mode').classList.remove('active'));
+        }
+        
+        function toggleAudioReactive() {
+            engine.audioReactive = !engine.audioReactive;
+            document.querySelector('[onclick="toggleAudioReactive()"]').textContent = 
+                engine.audioReactive ? 'Disable Audio' : 'Audio Reactive';
+        }
+        
+        // Update stats
+        setInterval(() => {
+            document.getElementById('particleCountStat').textContent = engine.particles.length;
+            document.getElementById('fps').textContent = engine.fps;
+            
+            if (engine.audioReactive) {
+                const level = audioHandler.getAudioLevel();
+                const sensitivity = parseFloat(document.getElementById('sensitivity').value);
+                engine.audioLevel = level * sensitivity;
+                document.getElementById('audioLevel').textContent = (level * 100).toFixed(1) + '%';
+            } else {
+                document.getElementById('audioLevel').textContent = '0%';
+            }
+        }, 100);
+        
+        // Load default preset
+        loadPreset('fireworks');
+    </script>
+</body>
+</html>
