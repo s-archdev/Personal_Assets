@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Water Physics Engine</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0a0a, #1a0a2e, #16213e);
+            font-family: 'Courier New', monospace;
+            color: #00ffff;
+            overflow: hidden;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .simulation-area {
+            flex: 1;
+            position: relative;
+            border: 2px solid #00ffff;
+            border-radius: 10px;
+            margin: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+            overflow: hidden;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: radial-gradient(circle at center, rgba(0, 20, 40, 0.8), rgba(0, 0, 0, 0.9));
+        }
+
+        .controls {
+            width: 280px;
+            background: rgba(0, 0, 0, 0.9);
+            border-left: 2px solid #ff00ff;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: -10px 0 30px rgba(255, 0, 255, 0.2);
+        }
+
+        .control-group {
+            margin-bottom: 25px;
+            background: rgba(0, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+        }
+
+        .control-label {
+            color: #00ffff;
+            font-size: 14px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .slider-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .slider {
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, #ff00ff, #00ffff);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #00ffff;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+            border: 2px solid #ffffff;
+        }
+
+        .slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #00ffff;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+            border: 2px solid #ffffff;
+        }
+
+        .value-display {
+            color: #ff00ff;
+            font-size: 12px;
+            text-align: right;
+            margin-top: 5px;
+            text-shadow: 0 0 8px rgba(255, 0, 255, 0.6);
+        }
+
+        .button {
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            border: none;
+            padding: 10px 20px;
+            color: white;
+            border-radius: 25px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
+            margin: 5px;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 30px rgba(0, 255, 255, 0.5);
+        }
+
+        .title {
+            text-align: center;
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #00ffff;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .particle-count {
+            color: #ff00ff;
+            font-size: 12px;
+            text-align: center;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px rgba(255, 0, 255, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="simulation-area">
+            <canvas id="canvas"></canvas>
+        </div>
+        
+        <div class="controls">
+            <div class="title">Neon Physics Control</div>
+            <div class="particle-count" id="particleCount">Particles: 0</div>
+            
+            <div class="control-group">
+                <div class="control-label">Physics Settings</div>
+                
+                <div class="slider-container">
+                    <label>Gravity</label>
+                    <input type="range" class="slider" id="gravity" min="0" max="2" step="0.1" value="0.5">
+                    <div class="value-display" id="gravityValue">0.5</div>
+                </div>
+                
+                <div class="slider-container">
+                    <label>Viscosity</label>
+                    <input type="range" class="slider" id="viscosity" min="0" max="1" step="0.05" value="0.3">
+                    <div class="value-display" id="viscosityValue">0.3</div>
+                </div>
+                
+                <div class="slider-container">
+                    <label>Surface Tension</label>
+                    <input type="range" class="slider" id="tension" min="0" max="1" step="0.05" value="0.5">
+                    <div class="value-display" id="tensionValue">0.5</div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <div class="control-label">Rendering</div>
+                
+                <div class="slider-container">
+                    <label>Particle Size</label>
+                    <input type="range" class="slider" id="particleSize" min="1" max="8" step="0.5" value="3">
+                    <div class="value-display" id="particleSizeValue">3</div>
+                </div>
+                
+                <div class="slider-container">
+                    <label>Glow Intensity</label>
+                    <input type="range" class="slider" id="glowIntensity" min="0" max="20" step="1" value="10">
+                    <div class="value-display" id="glowIntensityValue">10</div>
+                </div>
+                
+                <div class="slider-container">
+                    <label>Trail Length</label>
+                    <input type="range" class="slider" id="trailLength" min="0" max="20" step="1" value="5">
+                    <div class="value-display" id="trailLengthValue">5</div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <div class="control-label">Simulation</div>
+                
+                <div class="slider-container">
+                    <label>Spawn Rate</label>
+                    <input type="range" class="slider" id="spawnRate" min="1" max="20" step="1" value="8">
+                    <div class="value-display" id="spawnRateValue">8</div>
+                </div>
+                
+                <div class="slider-container">
+                    <label>Max Particles</label>
+                    <input type="range" class="slider" id="maxParticles" min="50" max="1000" step="50" value="400">
+                    <div class="value-display" id="maxParticlesValue">400</div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <button class="button" id="resetBtn">Reset</button>
+                <button class="button" id="pauseBtn">Pause</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class WaterParticle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = Math.random() * 2;
+                this.life = 1.0;
+                this.trail = [];
+                this.maxTrailLength = 5;
+            }
+
+            update(gravity, viscosity, tension, canvas) {
+                // Update trail
+                this.trail.push({ x: this.x, y: this.y, life: this.life });
+                if (this.trail.length > this.maxTrailLength) {
+                    this.trail.shift();
+                }
+
+                // Apply gravity
+                this.vy += gravity;
+
+                // Apply viscosity (drag)
+                this.vx *= (1 - viscosity * 0.1);
+                this.vy *= (1 - viscosity * 0.1);
+
+                // Update position
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Boundary collisions with energy loss
+                if (this.x <= 0 || this.x >= canvas.width) {
+                    this.vx *= -0.7;
+                    this.x = Math.max(0, Math.min(canvas.width, this.x));
+                }
+
+                if (this.y <= 0 || this.y >= canvas.height) {
+                    this.vy *= -0.6;
+                    this.y = Math.max(0, Math.min(canvas.height, this.y));
+                    
+                    // Surface tension effect at bottom
+                    if (this.y >= canvas.height - 5) {
+                        this.vy -= tension * 0.5;
+                    }
+                }
+
+                // Gradual life decay
+                this.life -= 0.002;
+            }
+
+            applyForces(particles, tension) {
+                const interactionRadius = 20;
+                let fx = 0, fy = 0;
+
+                particles.forEach(other => {
+                    if (other === this) return;
+
+                    const dx = other.x - this.x;
+                    const dy = other.y - this.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < interactionRadius && distance > 0) {
+                        const force = (interactionRadius - distance) / interactionRadius;
+                        
+                        // Cohesion (surface tension)
+                        fx += dx / distance * force * tension * 0.1;
+                        fy += dy / distance * force * tension * 0.1;
+                        
+                        // Repulsion to prevent overlap
+                        if (distance < 8) {
+                            fx -= dx / distance * force * 0.2;
+                            fy -= dy / distance * force * 0.2;
+                        }
+                    }
+                });
+
+                this.vx += fx;
+                this.vy += fy;
+            }
+
+            draw(ctx, particleSize, glowIntensity, trailLength) {
+                // Update trail length
+                this.maxTrailLength = trailLength;
+
+                // Draw trail
+                if (this.trail.length > 1) {
+                    ctx.globalCompositeOperation = 'screen';
+                    for (let i = 0; i < this.trail.length - 1; i++) {
+                        const point = this.trail[i];
+                        const alpha = (i / this.trail.length) * this.life * 0.3;
+                        
+                        ctx.shadowBlur = glowIntensity * 0.5;
+                        ctx.shadowColor = `hsl(${180 + i * 20}, 100%, 50%)`;
+                        ctx.fillStyle = `hsla(${180 + i * 20}, 100%, 50%, ${alpha})`;
+                        ctx.beginPath();
+                        ctx.arc(point.x, point.y, particleSize * 0.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+
+                // Draw main particle
+                ctx.globalCompositeOperation = 'screen';
+                ctx.shadowBlur = glowIntensity;
+                ctx.shadowColor = `hsl(${190 + Math.sin(this.x * 0.01) * 30}, 100%, 60%)`;
+                
+                const hue = 190 + Math.sin(this.x * 0.01 + this.y * 0.01) * 30;
+                ctx.fillStyle = `hsla(${hue}, 100%, 60%, ${this.life})`;
+                
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, particleSize, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Additional glow layer
+                ctx.shadowBlur = glowIntensity * 2;
+                ctx.fillStyle = `hsla(${hue}, 100%, 80%, ${this.life * 0.3})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, particleSize * 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        class WaterPhysicsEngine {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.particles = [];
+                this.isRunning = true;
+                this.lastSpawn = 0;
+                
+                // Physics parameters
+                this.gravity = 0.5;
+                this.viscosity = 0.3;
+                this.tension = 0.5;
+                this.particleSize = 3;
+                this.glowIntensity = 10;
+                this.trailLength = 5;
+                this.spawnRate = 8;
+                this.maxParticles = 400;
+
+                this.setupCanvas();
+                this.bindEvents();
+                this.animate();
+            }
+
+            setupCanvas() {
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+            }
+
+            resizeCanvas() {
+                const rect = this.canvas.parentElement.getBoundingClientRect();
+                this.canvas.width = rect.width - 4;
+                this.canvas.height = rect.height - 4;
+            }
+
+            bindEvents() {
+                // Mouse interaction
+                this.canvas.addEventListener('mousemove', (e) => {
+                    if (e.buttons === 1) {
+                        const rect = this.canvas.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const y = e.clientY - rect.top;
+                        this.spawnParticles(x, y, 3);
+                    }
+                });
+
+                this.canvas.addEventListener('click', (e) => {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    this.spawnParticles(x, y, 10);
+                });
+            }
+
+            spawnParticles(x, y, count) {
+                for (let i = 0; i < count; i++) {
+                    if (this.particles.length < this.maxParticles) {
+                        this.particles.push(new WaterParticle(
+                            x + (Math.random() - 0.5) * 20,
+                            y + (Math.random() - 0.5) * 20
+                        ));
+                    }
+                }
+            }
+
+            update() {
+                if (!this.isRunning) return;
+
+                // Auto-spawn particles
+                if (Date.now() - this.lastSpawn > 100) {
+                    if (this.particles.length < this.maxParticles) {
+                        this.spawnParticles(
+                            this.canvas.width * 0.5 + (Math.random() - 0.5) * 100,
+                            50,
+                            this.spawnRate
+                        );
+                    }
+                    this.lastSpawn = Date.now();
+                }
+
+                // Apply inter-particle forces
+                this.particles.forEach(particle => {
+                    particle.applyForces(this.particles, this.tension);
+                });
+
+                // Update particles
+                this.particles = this.particles.filter(particle => {
+                    particle.update(this.gravity, this.viscosity, this.tension, this.canvas);
+                    return particle.life > 0;
+                });
+
+                // Update particle count display
+                document.getElementById('particleCount').textContent = `Particles: ${this.particles.length}`;
+            }
+
+            render() {
+                // Clear with fade effect
+                this.ctx.globalCompositeOperation = 'source-over';
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Draw particles
+                this.particles.forEach(particle => {
+                    particle.draw(this.ctx, this.particleSize, this.glowIntensity, this.trailLength);
+                });
+            }
+
+            animate() {
+                this.update();
+                this.render();
+                requestAnimationFrame(() => this.animate());
+            }
+
+            reset() {
+                this.particles = [];
+            }
+
+            pause() {
+                this.isRunning = !this.isRunning;
+            }
+        }
+
+        // Initialize the engine
+        const canvas = document.getElementById('canvas');
+        const engine = new WaterPhysicsEngine(canvas);
+
+        // Control panel setup
+        function setupControls() {
+            const controls = [
+                { id: 'gravity', property: 'gravity' },
+                { id: 'viscosity', property: 'viscosity' },
+                { id: 'tension', property: 'tension' },
+                { id: 'particleSize', property: 'particleSize' },
+                { id: 'glowIntensity', property: 'glowIntensity' },
+                { id: 'trailLength', property: 'trailLength' },
+                { id: 'spawnRate', property: 'spawnRate' },
+                { id: 'maxParticles', property: 'maxParticles' }
+            ];
+
+            controls.forEach(control => {
+                const slider = document.getElementById(control.id);
+                const valueDisplay = document.getElementById(control.id + 'Value');
+
+                slider.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    engine[control.property] = value;
+                    valueDisplay.textContent = value;
+                });
+            });
+
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                engine.reset();
+            });
+
+            document.getElementById('pauseBtn').addEventListener('click', () => {
+                engine.pause();
+                document.getElementById('pauseBtn').textContent = engine.isRunning ? 'Pause' : 'Resume';
+            });
+        }
+
+        setupControls();
+    </script>
+</body>
+</html>
