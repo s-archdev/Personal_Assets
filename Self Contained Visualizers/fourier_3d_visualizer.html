@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Fourier Transform Visualizer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            overflow: hidden;
+        }
+        
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            min-width: 300px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #a0a0a0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            background: linear-gradient(90deg, #333, #666);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(45deg, #00d4ff, #0066cc);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+        
+        .value-display {
+            min-width: 60px;
+            text-align: right;
+            font-size: 11px;
+            color: #00d4ff;
+            font-weight: bold;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #00d4ff, #0066cc);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            margin: 2px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.4);
+        }
+        
+        button.active {
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.5);
+        }
+        
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        
+        #info {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 11px;
+            color: #a0a0a0;
+            max-width: 250px;
+        }
+        
+        .title {
+            color: #00d4ff;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+        
+        .equation {
+            background: rgba(0, 212, 255, 0.1);
+            border-left: 3px solid #00d4ff;
+            padding: 8px;
+            margin: 8px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="controls">
+            <div class="title">Fourier Transform 3D</div>
+            
+            <div class="control-group">
+                <label>Visualization Mode</label>
+                <div class="button-group">
+                    <button onclick="setMode('time')" id="timeBtn" class="active">Time Domain</button>
+                    <button onclick="setMode('freq')" id="freqBtn">Frequency Domain</button>
+                    <button onclick="setMode('both')" id="bothBtn">Both Domains</button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>Signal Type</label>
+                <div class="button-group">
+                    <button onclick="setSignal('sine')" id="sineBtn" class="active">Sine Wave</button>
+                    <button onclick="setSignal('square')" id="squareBtn">Square Wave</button>
+                    <button onclick="setSignal('sawtooth')" id="sawtoothBtn">Sawtooth</button>
+                    <button onclick="setSignal('pulse')" id="pulseBtn">Pulse Train</button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>Frequency (Hz)</label>
+                <div class="control-row">
+                    <input type="range" id="frequency" min="0.1" max="5" step="0.1" value="1">
+                    <span class="value-display" id="freqValue">1.0</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>Amplitude</label>
+                <div class="control-row">
+                    <input type="range" id="amplitude" min="0.1" max="2" step="0.1" value="1">
+                    <span class="value-display" id="ampValue">1.0</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>Phase (radians)</label>
+                <div class="control-row">
+                    <input type="range" id="phase" min="0" max="6.28" step="0.1" value="0">
+                    <span class="value-display" id="phaseValue">0.0</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>Animation Speed</label>
+                <div class="control-row">
+                    <input type="range" id="speed" min="0" max="2" step="0.1" value="1">
+                    <span class="value-display" id="speedValue">1.0</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <div class="button-group">
+                    <button onclick="toggleAnimation()" id="animBtn">Pause</button>
+                    <button onclick="resetView()">Reset View</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="info">
+            <div class="equation">F(ω) = ∫ f(t)e^(-iωt) dt</div>
+            <strong>Controls:</strong><br>
+            • Mouse: Rotate view<br>
+            • Wheel: Zoom<br>
+            • Right-click: Pan<br><br>
+            <strong>Visualization:</strong><br>
+            <span style="color: #00d4ff;">Blue:</span> Time domain<br>
+            <span style="color: #ff6b35;">Orange:</span> Frequency domain<br>
+            <span style="color: #00ff88;">Green:</span> Magnitude spectrum
+        </div>
+    </div>
+
+    <script>
+        let scene, camera, renderer, controls;
+        let timeDomainMesh, freqDomainMesh, magnitudeMesh;
+        let animationId;
+        let isAnimating = true;
+        let time = 0;
+        
+        // Parameters
+        let params = {
+            mode: 'time',
+            signal: 'sine',
+            frequency: 1.0,
+            amplitude: 1.0,
+            phase: 0.0,
+            speed: 1.0
+        };
+        
+        // Initialize the scene
+        function init() {
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a0a);
+            
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(15, 10, 15);
+            
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('container').appendChild(renderer.domElement);
+            
+            // Add orbit controls
+            addOrbitControls();
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+            
+            // Add grid and axes
+            addGridAndAxes();
+            
+            // Create visualizations
+            createTimeDomainVisualization();
+            createFrequencyDomainVisualization();
+            
+            // Event listeners
+            setupEventListeners();
+            
+            // Start animation
+            animate();
+        }
+        
+        function addOrbitControls() {
+            // Simple orbit controls implementation
+            let mouseDown = false;
+            let mouseX = 0, mouseY = 0;
+            let targetRotationY = 0, targetRotationX = 0;
+            let rotationY = 0, rotationX = 0;
+            
+            renderer.domElement.addEventListener('mousedown', (e) => {
+                mouseDown = true;
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+            });
+            
+            renderer.domElement.addEventListener('mouseup', () => {
+                mouseDown = false;
+            });
+            
+            renderer.domElement.addEventListener('mousemove', (e) => {
+                if (mouseDown) {
+                    targetRotationY += (e.clientX - mouseX) * 0.01;
+                    targetRotationX += (e.clientY - mouseY) * 0.01;
+                    targetRotationX = Math.max(-Math.PI/2, Math.min(Math.PI/2, targetRotationX));
+                    mouseX = e.clientX;
+                    mouseY = e.clientY;
+                }
+            });
+            
+            renderer.domElement.addEventListener('wheel', (e) => {
+                camera.position.multiplyScalar(e.deltaY > 0 ? 1.1 : 0.9);
+                camera.position.clampLength(5, 50);
+            });
+            
+            // Update camera position in animation loop
+            function updateCamera() {
+                rotationY += (targetRotationY - rotationY) * 0.05;
+                rotationX += (targetRotationX - rotationX) * 0.05;
+                
+                const radius = camera.position.length();
+                camera.position.x = radius * Math.sin(rotationY) * Math.cos(rotationX);
+                camera.position.y = radius * Math.sin(rotationX);
+                camera.position.z = radius * Math.cos(rotationY) * Math.cos(rotationX);
+                camera.lookAt(0, 0, 0);
+            }
+            
+            // Store update function for use in animate loop
+            controls = { update: updateCamera };
+        }
+        
+        function addGridAndAxes() {
+            // Grid
+            const gridHelper = new THREE.GridHelper(20, 20, 0x333333, 0x222222);
+            scene.add(gridHelper);
+            
+            // Axes
+            const axesHelper = new THREE.AxesHelper(10);
+            scene.add(axesHelper);
+            
+            // Axis labels
+            const loader = new THREE.FontLoader();
+            // We'll skip font loading for simplicity and use basic geometries for labels
+        }
+        
+        function createTimeDomainVisualization() {
+            const geometry = new THREE.BufferGeometry();
+            const material = new THREE.LineBasicMaterial({ 
+                color: 0x00d4ff, 
+                linewidth: 3,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            timeDomainMesh = new THREE.Line(geometry, material);
+            scene.add(timeDomainMesh);
+        }
+        
+        function createFrequencyDomainVisualization() {
+            const geometry = new THREE.BufferGeometry();
+            const material = new THREE.LineBasicMaterial({ 
+                color: 0xff6b35, 
+                linewidth: 3,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            freqDomainMesh = new THREE.Line(geometry, material);
+            freqDomainMesh.position.x = 12;
+            scene.add(freqDomainMesh);
+            
+            // Magnitude spectrum (bars)
+            const barGeometry = new THREE.BufferGeometry();
+            const barMaterial = new THREE.LineBasicMaterial({ 
+                color: 0x00ff88, 
+                linewidth: 2,
+                transparent: true,
+                opacity: 0.6
+            });
+            
+            magnitudeMesh = new THREE.LineSegments(barGeometry, barMaterial);
+            magnitudeMesh.position.x = 12;
+            scene.add(magnitudeMesh);
+        }
+        
+        function generateSignal(t, type) {
+            const freq = params.frequency;
+            const amp = params.amplitude;
+            const phase = params.phase;
+            
+            switch(type) {
+                case 'sine':
+                    return amp * Math.sin(2 * Math.PI * freq * t + phase);
+                case 'square':
+                    return amp * Math.sign(Math.sin(2 * Math.PI * freq * t + phase));
+                case 'sawtooth':
+                    return amp * (2 * (freq * t + phase / (2 * Math.PI) - Math.floor(freq * t + phase / (2 * Math.PI) + 0.5)));
+                case 'pulse':
+                    const period = 1 / freq;
+                    const pulseWidth = period * 0.1;
+                    return amp * ((t % period) < pulseWidth ? 1 : 0);
+                default:
+                    return 0;
+            }
+        }
+        
+        function updateTimeDomain() {
+            const points = [];
+            const numPoints = 200;
+            const timeRange = 4;
+            
+            for (let i = 0; i < numPoints; i++) {
+                const t = (i / numPoints) * timeRange - timeRange/2 + time * params.speed * 0.1;
+                const y = generateSignal(t, params.signal);
+                const x = (i / numPoints) * 10 - 5;
+                points.push(x, y * 3, 0);
+            }
+            
+            timeDomainMesh.geometry.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
+            timeDomainMesh.geometry.attributes.position.needsUpdate = true;
+        }
+        
+        function computeFFT(signal) {
+            // Simple DFT implementation for visualization
+            const N = signal.length;
+            const freqDomain = [];
+            
+            for (let k = 0; k < N/2; k++) {
+                let real = 0, imag = 0;
+                for (let n = 0; n < N; n++) {
+                    const angle = -2 * Math.PI * k * n / N;
+                    real += signal[n] * Math.cos(angle);
+                    imag += signal[n] * Math.sin(angle);
+                }
+                freqDomain.push({ real, imag, magnitude: Math.sqrt(real*real + imag*imag) });
+            }
+            
+            return freqDomain;
+        }
+        
+        function updateFrequencyDomain() {
+            // Generate time domain signal for FFT
+            const numSamples = 128;
+            const signal = [];
+            for (let i = 0; i < numSamples; i++) {
+                const t = i / numSamples * 2;
+                signal.push(generateSignal(t, params.signal));
+            }
+            
+            const fft = computeFFT(signal);
+            
+            // Update frequency domain line
+            const freqPoints = [];
+            const magPoints = [];
+            
+            for (let i = 0; i < fft.length; i++) {
+                const freq = i / 2; // Normalize frequency
+                const x = (freq / 32) * 10 - 5;
+                const magnitude = fft[i].magnitude / 10; // Scale for visibility
+                
+                // Frequency domain (real part)
+                freqPoints.push(x, fft[i].real / 10, 0);
+                
+                // Magnitude spectrum (bars)
+                magPoints.push(x, 0, 0);
+                magPoints.push(x, magnitude, 0);
+            }
+            
+            freqDomainMesh.geometry.setAttribute('position', new THREE.Float32BufferAttribute(freqPoints, 3));
+            freqDomainMesh.geometry.attributes.position.needsUpdate = true;
+            
+            magnitudeMesh.geometry.setAttribute('position', new THREE.Float32BufferAttribute(magPoints, 3));
+            magnitudeMesh.geometry.attributes.position.needsUpdate = true;
+        }
+        
+        function updateVisibility() {
+            timeDomainMesh.visible = params.mode === 'time' || params.mode === 'both';
+            freqDomainMesh.visible = params.mode === 'freq' || params.mode === 'both';
+            magnitudeMesh.visible = params.mode === 'freq' || params.mode === 'both';
+        }
+        
+        function animate() {
+            if (isAnimating) {
+                time += 0.1;
+                updateTimeDomain();
+                updateFrequencyDomain();
+            }
+            
+            controls.update();
+            renderer.render(scene, camera);
+            animationId = requestAnimationFrame(animate);
+        }
+        
+        function setupEventListeners() {
+            // Frequency
+            document.getElementById('frequency').addEventListener('input', (e) => {
+                params.frequency = parseFloat(e.target.value);
+                document.getElementById('freqValue').textContent = params.frequency.toFixed(1);
+            });
+            
+            // Amplitude
+            document.getElementById('amplitude').addEventListener('input', (e) => {
+                params.amplitude = parseFloat(e.target.value);
+                document.getElementById('ampValue').textContent = params.amplitude.toFixed(1);
+            });
+            
+            // Phase
+            document.getElementById('phase').addEventListener('input', (e) => {
+                params.phase = parseFloat(e.target.value);
+                document.getElementById('phaseValue').textContent = params.phase.toFixed(1);
+            });
+            
+            // Speed
+            document.getElementById('speed').addEventListener('input', (e) => {
+                params.speed = parseFloat(e.target.value);
+                document.getElementById('speedValue').textContent = params.speed.toFixed(1);
+            });
+            
+            // Window resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+        
+        function setMode(mode) {
+            params.mode = mode;
+            updateVisibility();
+            
+            // Update button states
+            document.querySelectorAll('#controls button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(mode + 'Btn').classList.add('active');
+        }
+        
+        function setSignal(signal) {
+            params.signal = signal;
+            
+            // Update button states
+            document.querySelectorAll('#controls button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(signal + 'Btn').classList.add('active');
+        }
+        
+        function toggleAnimation() {
+            isAnimating = !isAnimating;
+            document.getElementById('animBtn').textContent = isAnimating ? 'Pause' : 'Play';
+        }
+        
+        function resetView() {
+            camera.position.set(15, 10, 15);
+            camera.lookAt(0, 0, 0);
+        }
+        
+        // Initialize everything
+        init();
+    </script>
+</body>
+</html>

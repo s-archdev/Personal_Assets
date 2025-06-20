@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Prime Distribution Visualizer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            color: #ffffff;
+        }
+        
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            min-width: 280px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #00ffff;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        select, input[type="range"] {
+            width: 100%;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 5px;
+            color: #ffffff;
+            font-family: inherit;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+        
+        #info {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 15px;
+            font-size: 11px;
+            color: #00ffff;
+            max-width: 300px;
+        }
+        
+        .value-display {
+            color: #ffffff;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #00ffff, #0066cc);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 255, 0.4);
+        }
+        
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 200;
+            color: #00ffff;
+            font-size: 18px;
+            text-align: center;
+        }
+        
+        .spinner {
+            border: 3px solid rgba(0, 255, 255, 0.3);
+            border-top: 3px solid #00ffff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="loading">
+            <div class="spinner"></div>
+            Generating primes and building visualization...
+        </div>
+        
+        <div id="controls">
+            <div class="control-group">
+                <label>Visualization Mode</label>
+                <select id="modeSelect">
+                    <option value="spiral">Ulam Spiral</option>
+                    <option value="3d-grid">3D Grid</option>
+                    <option value="polar">Polar Coordinates</option>
+                    <option value="fibonacci">Fibonacci Spiral</option>
+                    <option value="twin-primes">Twin Primes</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>Prime Range</label>
+                <input type="range" id="rangeSlider" min="100" max="10000" value="2000" step="100">
+                <span class="value-display" id="rangeValue">2000</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Animation Speed</label>
+                <input type="range" id="speedSlider" min="0.5" max="5" value="1" step="0.1">
+                <span class="value-display" id="speedValue">1.0x</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Point Size</label>
+                <input type="range" id="sizeSlider" min="0.1" max="2" value="0.5" step="0.1">
+                <span class="value-display" id="sizeValue">0.5</span>
+            </div>
+            
+            <button onclick="regenerateVisualization()">Regenerate</button>
+            <button onclick="toggleAnimation()">Pause/Play</button>
+        </div>
+        
+        <div id="info">
+            <div><strong>Prime Count:</strong> <span id="primeCount">0</span></div>
+            <div><strong>Density:</strong> <span id="density">0%</span></div>
+            <div><strong>Largest Gap:</strong> <span id="largestGap">0</span></div>
+            <div style="margin-top: 10px; font-size: 10px; opacity: 0.7;">
+                Mouse: Rotate • Wheel: Zoom • Click: Select
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let scene, camera, renderer, controls, animationId;
+        let primes = [];
+        let currentMode = 'spiral';
+        let animationSpeed = 1;
+        let isAnimating = true;
+        let pointSize = 0.5;
+        let currentRange = 2000;
+        
+        // Sieve of Eratosthenes for efficient prime generation
+        function generatePrimes(limit) {
+            const sieve = new Array(limit + 1).fill(true);
+            sieve[0] = sieve[1] = false;
+            
+            for (let i = 2; i * i <= limit; i++) {
+                if (sieve[i]) {
+                    for (let j = i * i; j <= limit; j += i) {
+                        sieve[j] = false;
+                    }
+                }
+            }
+            
+            return sieve.map((isPrime, num) => isPrime ? num : null).filter(Boolean);
+        }
+        
+        // Custom mouse controls
+        class MouseControls {
+            constructor(camera, domElement) {
+                this.camera = camera;
+                this.domElement = domElement;
+                this.isMouseDown = false;
+                this.mouseX = 0;
+                this.mouseY = 0;
+                this.targetRotationX = 0;
+                this.targetRotationY = 0;
+                this.rotationX = 0;
+                this.rotationY = 0;
+                
+                this.bindEvents();
+            }
+            
+            bindEvents() {
+                this.domElement.addEventListener('mousedown', (e) => {
+                    this.isMouseDown = true;
+                    this.mouseX = e.clientX;
+                    this.mouseY = e.clientY;
+                });
+                
+                this.domElement.addEventListener('mousemove', (e) => {
+                    if (this.isMouseDown) {
+                        const deltaX = e.clientX - this.mouseX;
+                        const deltaY = e.clientY - this.mouseY;
+                        
+                        this.targetRotationY += deltaX * 0.01;
+                        this.targetRotationX += deltaY * 0.01;
+                        
+                        this.mouseX = e.clientX;
+                        this.mouseY = e.clientY;
+                    }
+                });
+                
+                this.domElement.addEventListener('mouseup', () => {
+                    this.isMouseDown = false;
+                });
+                
+                this.domElement.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    this.camera.position.z += e.deltaY * 0.01;
+                    this.camera.position.z = Math.max(5, Math.min(50, this.camera.position.z));
+                });
+            }
+            
+            update() {
+                this.rotationX += (this.targetRotationX - this.rotationX) * 0.1;
+                this.rotationY += (this.targetRotationY - this.rotationY) * 0.1;
+                
+                this.camera.position.x = Math.sin(this.rotationY) * 20;
+                this.camera.position.y = Math.sin(this.rotationX) * 20;
+                this.camera.lookAt(0, 0, 0);
+            }
+        }
+        
+        function init() {
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x0a0a0a, 10, 100);
+            
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 0, 20);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x0a0a0a, 0.8);
+            document.getElementById('container').appendChild(renderer.domElement);
+            
+            controls = new MouseControls(camera, renderer.domElement);
+            
+            // Add ambient lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0x00ffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            scene.add(directionalLight);
+            
+            setupEventListeners();
+            generateVisualization();
+        }
+        
+        function setupEventListeners() {
+            document.getElementById('modeSelect').addEventListener('change', (e) => {
+                currentMode = e.target.value;
+                generateVisualization();
+            });
+            
+            document.getElementById('rangeSlider').addEventListener('input', (e) => {
+                currentRange = parseInt(e.target.value);
+                document.getElementById('rangeValue').textContent = currentRange;
+            });
+            
+            document.getElementById('speedSlider').addEventListener('input', (e) => {
+                animationSpeed = parseFloat(e.target.value);
+                document.getElementById('speedValue').textContent = animationSpeed.toFixed(1) + 'x';
+            });
+            
+            document.getElementById('sizeSlider').addEventListener('input', (e) => {
+                pointSize = parseFloat(e.target.value);
+                document.getElementById('sizeValue').textContent = pointSize;
+                updatePointSizes();
+            });
+            
+            window.addEventListener('resize', onWindowResize);
+        }
+        
+        function generateVisualization() {
+            document.getElementById('loading').style.display = 'block';
+            
+            setTimeout(() => {
+                // Clear existing objects
+                while (scene.children.length > 2) {
+                    scene.remove(scene.children[2]);
+                }
+                
+                primes = generatePrimes(currentRange);
+                updateInfo();
+                
+                switch (currentMode) {
+                    case 'spiral':
+                        createUlamSpiral();
+                        break;
+                    case '3d-grid':
+                        create3DGrid();
+                        break;
+                    case 'polar':
+                        createPolarVisualization();
+                        break;
+                    case 'fibonacci':
+                        createFibonacciSpiral();
+                        break;
+                    case 'twin-primes':
+                        createTwinPrimesVisualization();
+                        break;
+                }
+                
+                document.getElementById('loading').style.display = 'none';
+            }, 100);
+        }
+        
+        function createUlamSpiral() {
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+            
+            let x = 0, y = 0, z = 0;
+            let dx = 0, dy = -1;
+            const primeSet = new Set(primes);
+            
+            for (let i = 1; i <= currentRange; i++) {
+                if (primeSet.has(i)) {
+                    positions.push(x * 0.5, y * 0.5, z);
+                    
+                    // Color based on prime magnitude
+                    const intensity = Math.log(i) / Math.log(currentRange);
+                    colors.push(intensity, 1 - intensity * 0.5, 1);
+                }
+                
+                // Spiral movement logic
+                if (x === y || (x < 0 && x === -y) || (x > 0 && x === 1 - y)) {
+                    [dx, dy] = [-dy, dx];
+                }
+                x += dx;
+                y += dy;
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: pointSize,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const points = new THREE.Points(geometry, material);
+            scene.add(points);
+        }
+        
+        function create3DGrid() {
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+            const gridSize = Math.ceil(Math.cbrt(currentRange));
+            const primeSet = new Set(primes);
+            
+            let index = 1;
+            for (let x = 0; x < gridSize && index <= currentRange; x++) {
+                for (let y = 0; y < gridSize && index <= currentRange; y++) {
+                    for (let z = 0; z < gridSize && index <= currentRange; z++) {
+                        if (primeSet.has(index)) {
+                            positions.push(
+                                (x - gridSize/2) * 0.8,
+                                (y - gridSize/2) * 0.8,
+                                (z - gridSize/2) * 0.8
+                            );
+                            
+                            const hue = (index % 360) / 360;
+                            colors.push(
+                                Math.sin(hue * Math.PI * 2) * 0.5 + 0.5,
+                                Math.sin((hue + 0.33) * Math.PI * 2) * 0.5 + 0.5,
+                                Math.sin((hue + 0.66) * Math.PI * 2) * 0.5 + 0.5
+                            );
+                        }
+                        index++;
+                    }
+                }
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: pointSize,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.9
+            });
+            
+            const points = new THREE.Points(geometry, material);
+            scene.add(points);
+        }
+        
+        function createPolarVisualization() {
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+            
+            primes.forEach((prime, index) => {
+                const angle = prime * 0.1;
+                const radius = Math.sqrt(prime) * 0.3;
+                const height = Math.sin(prime * 0.01) * 2;
+                
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                const z = height;
+                
+                positions.push(x, y, z);
+                
+                const intensity = (index / primes.length);
+                colors.push(1, intensity, 1 - intensity);
+            });
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: pointSize,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const points = new THREE.Points(geometry, material);
+            scene.add(points);
+        }
+        
+        function createFibonacciSpiral() {
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+            const phi = (1 + Math.sqrt(5)) / 2;
+            
+            primes.forEach((prime, index) => {
+                const angle = index * 2 * Math.PI / phi;
+                const radius = Math.sqrt(index) * 0.3;
+                const height = Math.log(prime) * 0.5;
+                
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                const z = height;
+                
+                positions.push(x, y, z);
+                
+                const hue = (prime % 100) / 100;
+                colors.push(hue, 1 - hue * 0.5, 1);
+            });
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: pointSize,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const points = new THREE.Points(geometry, material);
+            scene.add(points);
+        }
+        
+        function createTwinPrimesVisualization() {
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+            const twinPrimes = [];
+            
+            // Find twin primes
+            for (let i = 0; i < primes.length - 1; i++) {
+                if (primes[i + 1] - primes[i] === 2) {
+                    twinPrimes.push([primes[i], primes[i + 1]]);
+                }
+            }
+            
+            twinPrimes.forEach((pair, index) => {
+                const [p1, p2] = pair;
+                const angle = index * 0.5;
+                const radius = Math.log(p1) * 2;
+                
+                // First prime
+                positions.push(
+                    Math.cos(angle) * radius,
+                    Math.sin(angle) * radius,
+                    0
+                );
+                colors.push(1, 0.5, 0);
+                
+                // Second prime (twin)
+                positions.push(
+                    Math.cos(angle) * radius * 1.1,
+                    Math.sin(angle) * radius * 1.1,
+                    0.2
+                );
+                colors.push(0, 1, 1);
+            });
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: pointSize * 1.5,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.9
+            });
+            
+            const points = new THREE.Points(geometry, material);
+            scene.add(points);
+        }
+        
+        function updatePointSizes() {
+            scene.children.forEach(child => {
+                if (child.material && child.material.size !== undefined) {
+                    child.material.size = pointSize;
+                }
+            });
+        }
+        
+        function updateInfo() {
+            document.getElementById('primeCount').textContent = primes.length;
+            document.getElementById('density').textContent = ((primes.length / currentRange) * 100).toFixed(2) + '%';
+            
+            // Calculate largest gap
+            let largestGap = 0;
+            for (let i = 1; i < primes.length; i++) {
+                const gap = primes[i] - primes[i - 1];
+                if (gap > largestGap) largestGap = gap;
+            }
+            document.getElementById('largestGap').textContent = largestGap;
+        }
+        
+        function animate() {
+            if (isAnimating) {
+                animationId = requestAnimationFrame(animate);
+                
+                // Rotate the entire scene slowly
+                scene.rotation.z += 0.005 * animationSpeed;
+                
+                controls.update();
+                renderer.render(scene, camera);
+            }
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        function regenerateVisualization() {
+            currentRange = parseInt(document.getElementById('rangeSlider').value);
+            generateVisualization();
+        }
+        
+        function toggleAnimation() {
+            isAnimating = !isAnimating;
+            if (isAnimating) {
+                animate();
+            }
+        }
+        
+        // Initialize the application
+        init();
+        animate();
+    </script>
+</body>
+</html>

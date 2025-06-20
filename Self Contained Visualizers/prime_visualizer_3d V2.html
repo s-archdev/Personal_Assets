@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced 3D Prime Distribution Visualizer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: radial-gradient(ellipse at center, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            color: #ffffff;
+        }
+        
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 25px;
+            min-width: 320px;
+            box-shadow: 0 15px 40px rgba(0, 255, 255, 0.1);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .control-section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .control-section:last-child {
+            border-bottom: none;
+        }
+        
+        .section-title {
+            color: #00ffff;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .control-group {
+            margin-bottom: 12px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #88ccff;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        select, input[type="range"], input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 8px;
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 12px;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+        }
+        
+        .dual-input {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .dual-input input {
+            flex: 1;
+        }
+        
+        #analysis-panel {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 20px;
+            min-width: 350px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        
+        #pattern-hints {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 165, 0, 0.3);
+            border-radius: 15px;
+            padding: 15px;
+            max-width: 300px;
+            font-size: 11px;
+            color: #ffaa00;
+        }
+        
+        .value-display {
+            color: #00ffff;
+            font-weight: bold;
+            margin-left: 10px;
+            font-size: 11px;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #00ffff, #0066cc);
+            border: none;
+            color: white;
+            padding: 10px 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            margin: 3px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 255, 255, 0.5);
+        }
+        
+        button.active {
+            background: linear-gradient(45deg, #ff6600, #cc3300);
+        }
+        
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10px;
+            color: #cccccc;
+        }
+        
+        input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .stat-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 8px;
+            border-left: 3px solid #00ffff;
+        }
+        
+        .stat-label {
+            font-size: 10px;
+            color: #88ccff;
+            text-transform: uppercase;
+        }
+        
+        .stat-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 200;
+            color: #00ffff;
+            font-size: 18px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+        }
+        
+        .spinner {
+            border: 3px solid rgba(0, 255, 255, 0.3);
+            border-top: 3px solid #00ffff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ffff, #0066cc);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0.5;
+        }
+        
+        .crosshair-line {
+            position: absolute;
+            background: #00ffff;
+        }
+        
+        .crosshair-h {
+            width: 20px;
+            height: 1px;
+            left: -10px;
+        }
+        
+        .crosshair-v {
+            width: 1px;
+            height: 20px;
+            top: -10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="loading">
+            <div class="spinner"></div>
+            <div id="loading-text">Initializing quantum prime field...</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress"></div>
+            </div>
+        </div>
+        
+        <div id="crosshair">
+            <div class="crosshair-line crosshair-h"></div>
+            <div class="crosshair-line crosshair-v"></div>
+        </div>
+        
+        <div id="controls">
+            <div class="control-section">
+                <div class="section-title">Visualization Mode</div>
+                <div class="control-group">
+                    <select id="modeSelect">
+                        <option value="quantum-foam">Quantum Foam</option>
+                        <option value="spiral">Ulam Spiral 3D</option>
+                        <option value="mandelbrot">Prime Mandelbrot</option>
+                        <option value="riemann-sphere">Riemann Sphere</option>
+                        <option value="3d-grid">Cubic Lattice</option>
+                        <option value="polar">Polar Storm</option>
+                        <option value="fibonacci">Fibonacci Helix</option>
+                        <option value="twin-primes">Twin Prime Constellation</option>
+                        <option value="gap-analysis">Gap Topology</option>
+                        <option value="density-field">Density Field</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <div class="section-title">Range & Precision</div>
+                <div class="control-group">
+                    <label>Prime Range</label>
+                    <input type="range" id="rangeSlider" min="100" max="50000" value="5000" step="100">
+                    <span class="value-display" id="rangeValue">5000</span>
+                </div>
+                <div class="control-group">
+                    <label>Custom Range</label>
+                    <div class="dual-input">
+                        <input type="number" id="startRange" placeholder="Start" value="1" min="1">
+                        <input type="number" id="endRange" placeholder="End" value="5000" min="1">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <div class="section-title">Visual Properties</div>
+                <div class="control-group">
+                    <label>Point Size</label>
+                    <input type="range" id="sizeSlider" min="0.1" max="3" value="0.8" step="0.1">
+                    <span class="value-display" id="sizeValue">0.8</span>
+                </div>
+                <div class="control-group">
+                    <label>Animation Speed</label>
+                    <input type="range" id="speedSlider" min="0" max="10" value="2" step="0.1">
+                    <span class="value-display" id="speedValue">2.0x</span>
+                </div>
+                <div class="control-group">
+                    <label>Field Intensity</label>
+                    <input type="range" id="intensitySlider" min="0.1" max="5" value="1" step="0.1">
+                    <span class="value-display" id="intensityValue">1.0</span>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <div class="section-title">Analysis Tools</div>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="showConnections"> <label>Prime Connections</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="showGaps"> <label>Gap Visualization</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="showClusters"> <label>Cluster Analysis</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="showPatterns"> <label>Pattern Detection</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="showDensityField"> <label>Density Field</label>
+                    </div>
+                </div>
+                <button onclick="toggleXRayMode()">X-Ray Mode</button>
+                <button onclick="captureFrame()">Capture Frame</button>
+            </div>
+            
+            <div class="control-section">
+                <div class="section-title">Interactive</div>
+                <button onclick="regenerateVisualization()">Regenerate</button>
+                <button onclick="toggleAnimation()" id="animBtn">Pause</button>
+                <button onclick="resetCamera()">Reset View</button>
+                <button onclick="findInterestingRegion()">Find Patterns</button>
+            </div>
+        </div>
+        
+        <div id="pattern-hints">
+            <div style="font-weight: bold; margin-bottom: 8px;">Pattern Hints:</div>
+            <div id="hintText">Explore different modes to discover prime mysteries...</div>
+        </div>
+        
+        <div id="analysis-panel">
+            <div class="section-title">Prime Analysis</div>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">Prime Count</div>
+                    <div class="stat-value" id="primeCount">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Density</div>
+                    <div class="stat-value" id="density">0%</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Largest Gap</div>
+                    <div class="stat-value" id="largestGap">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Twin Primes</div>
+                    <div class="stat-value" id="twinCount">0</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <div class="stat-label">Gap Distribution:</div>
+                <div id="gapDistribution" style="font-size: 10px; margin-top: 5px;"></div>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <div class="stat-label">Selected Prime:</div>
+                <div id="selectedPrime" style="color: #00ffff; font-size: 14px;">Click a prime to analyze</div>
+            </div>
+            
+            <div style="margin-top: 10px; font-size: 10px; opacity: 0.7; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+                <div><strong>Controls:</strong></div>
+                <div>• Mouse: Rotate view</div>
+                <div>• Wheel: Zoom in/out</div>
+                <div>• Click: Select prime</div>
+                <div>• Hold Shift: Multi-select</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let scene, camera, renderer, raycaster, mouse;
+        let primes = [];
+        let currentMode = 'quantum-foam';
+        let animationSpeed = 2;
+        let isAnimating = true;
+        let pointSize = 0.8;
+        let currentRange = 5000;
+        let fieldIntensity = 1;
+        let xrayMode = false;
+        let selectedPrimes = new Set();
+        let connectionLines = null;
+        let densityField = null;
+        let frameCount = 0;
+        
+        // Advanced mathematical constants
+        const PHI = (1 + Math.sqrt(5)) / 2;
+        const EULER = Math.E;
+        const PI2 = Math.PI * 2;
+        
+        // Camera control variables
+        let cameraAngle = { x: 0, y: 0 };
+        let cameraDistance = 25;
+        let isMouseDown = false;
+        let mouseStart = { x: 0, y: 0 };
+        
+        class AdvancedPrimeAnalyzer {
+            constructor() {
+                this.primes = [];
+                this.gaps = [];
+                this.twinPrimes = [];
+                this.clusters = [];
+            }
+            
+            analyze(primes) {
+                this.primes = primes;
+                this.calculateGaps();
+                this.findTwinPrimes();
+                this.detectClusters();
+                return this.getStatistics();
+            }
+            
+            calculateGaps() {
+                this.gaps = [];
+                for (let i = 1; i < this.primes.length; i++) {
+                    this.gaps.push(this.primes[i] - this.primes[i-1]);
+                }
+            }
+            
+            findTwinPrimes() {
+                this.twinPrimes = [];
+                for (let i = 0; i < this.gaps.length; i++) {
+                    if (this.gaps[i] === 2) {
+                        this.twinPrimes.push([this.primes[i], this.primes[i+1]]);
+                    }
+                }
+            }
+            
+            detectClusters() {
+                this.clusters = [];
+                let currentCluster = [];
+                const avgGap = this.gaps.reduce((a, b) => a + b, 0) / this.gaps.length;
+                
+                for (let i = 0; i < this.gaps.length; i++) {
+                    if (this.gaps[i] <= avgGap * 0.5) {
+                        currentCluster.push(this.primes[i]);
+                    } else {
+                        if (currentCluster.length >= 3) {
+                            this.clusters.push([...currentCluster]);
+                        }
+                        currentCluster = [];
+                    }
+                }
+            }
+            
+            getStatistics() {
+                const gapCounts = {};
+                this.gaps.forEach(gap => {
+                    gapCounts[gap] = (gapCounts[gap] || 0) + 1;
+                });
+                
+                return {
+                    primeCount: this.primes.length,
+                    twinCount: this.twinPrimes.length,
+                    clusterCount: this.clusters.length,
+                    maxGap: Math.max(...this.gaps),
+                    avgGap: this.gaps.reduce((a, b) => a + b, 0) / this.gaps.length,
+                    gapDistribution: gapCounts
+                };
+            }
+        }
+        
+        const analyzer = new AdvancedPrimeAnalyzer();
+        
+        function generatePrimes(start, end) {
+            const sieve = new Array(end + 1).fill(true);
+            sieve[0] = sieve[1] = false;
+            
+            for (let i = 2; i * i <= end; i++) {
+                if (sieve[i]) {
+                    for (let j = i * i; j <= end; j += i) {
+                        sieve[j] = false;
+                    }
+                }
+            }
+            
+            return sieve.map((isPrime, num) => isPrime && num >= start ? num : null)
+                       .filter(Boolean);
+        }
+        
+        function init() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x0a0a0a, 15, 100);
+            
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 0, cameraDistance);
+            
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true, 
+                alpha: true,
+                preserveDrawingBuffer: true 
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x0a0a0a, 0.9);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('container').appendChild(renderer.domElement);
+            
+            // Raycaster for interaction
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+            
+            // Enhanced lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0x00ffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+            
+            const pointLight = new THREE.PointLight(0xff6600, 0.6, 50);
+            pointLight.position.set(-10, -10, 10);
+            scene.add(pointLight);
+            
+            setupEventListeners();
+            generateVisualization();
+        }
+        
+        function setupEventListeners() {
+            // Control listeners
+            document.getElementById('modeSelect').addEventListener('change', (e) => {
+                currentMode = e.target.value;
+                updatePatternHints();
+                generateVisualization();
+            });
+            
+            document.getElementById('rangeSlider').addEventListener('input', (e) => {
+                currentRange = parseInt(e.target.value);
+                document.getElementById('rangeValue').textContent = currentRange;
+                document.getElementById('endRange').value = currentRange;
+            });
+            
+            document.getElementById('speedSlider').addEventListener('input', (e) => {
+                animationSpeed = parseFloat(e.target.value);
+                document.getElementById('speedValue').textContent = animationSpeed.toFixed(1) + 'x';
+            });
+            
+            document.getElementById('sizeSlider').addEventListener('input', (e) => {
+                pointSize = parseFloat(e.target.value);
+                document.getElementById('sizeValue').textContent = pointSize;
+                updatePointSizes();
+            });
+            
+            document.getElementById('intensitySlider').addEventListener('input', (e) => {
+                fieldIntensity = parseFloat(e.target.value);
+                document.getElementById('intensityValue').textContent = fieldIntensity;
+                updateFieldIntensity();
+            });
+            
+            // Analysis tool checkboxes
+            document.getElementById('showConnections').addEventListener('change', toggleConnections);
+            document.getElementById('showGaps').addEventListener('change', toggleGapVisualization);
+            document.getElementById('showClusters').addEventListener('change', toggleClusterAnalysis);
+            document.getElementById('showPatterns').addEventListener('change', togglePatternDetection);
+            document.getElementById('showDensityField').addEventListener('change', toggleDensityField);
+            
+            // Custom range inputs
+            document.getElementById('startRange').addEventListener('change', updateCustomRange);
+            document.getElementById('endRange').addEventListener('change', updateCustomRange);
+            
+            // Mouse controls
+            renderer.domElement.addEventListener('mousedown', onMouseDown);
+            renderer.domElement.addEventListener('mousemove', onMouseMove);
+            renderer.domElement.addEventListener('mouseup', onMouseUp);
+            renderer.domElement.addEventListener('wheel', onMouseWheel, { passive: false });
+            renderer.domElement.addEventListener('click', onMouseClick);
+            
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('keydown', onKeyDown);
+        }
+        
+        function updatePatternHints() {
+            const hints = {
+                'quantum-foam': 'Primes as quantum particles in spacetime foam. Look for interference patterns!',
+                'spiral': 'Classic Ulam spiral in 3D. Prime-rich diagonals become visible vertical structures.',
+                'mandelbrot': 'Primes mapped to complex plane. Fractal boundaries reveal deep connections.',
+                'riemann-sphere': 'Stereographic projection of primes. Critical line patterns emerge.',
+                '3d-grid': 'Volumetric prime distribution. Density variations show clustering.',
+                'polar': 'Polar coordinate mapping. Spiral arms highlight prime gaps.',
+                'fibonacci': 'Golden ratio spiral. Nature\'s prime distribution revealed.',
+                'twin-primes': 'Twin prime pairs connected in 3D space. Gaps show conjecture evidence.',
+                'gap-analysis': 'Prime gaps as topological features. Mountains show large gaps.',
+                'density-field': 'Prime density as continuous field. Waves show distribution patterns.'
+            };
+            
+            document.getElementById('hintText').textContent = hints[currentMode] || 'Explore the mysteries of prime distribution...';
+        }
+        
+        function generateVisualization() {
+            showLoading('Generating primes...');
+            
+            setTimeout(() => {
+                const start = parseInt(document.getElementById('startRange').value) || 1;
+                const end = parseInt(document.getElementById('endRange').value) || currentRange;
+                
+                updateProgress(20);
+                
+                // Clear existing objects except lights
+                const objectsToRemove = [];
+                scene.traverse((child) => {
+                    if (child.isPoints || child.isLine || child.isMesh) {
+                        if (!child.isLight) {
+                            objectsToRemove.push(child);
+                        }
+                    }
+                });
+                objectsToRemove.forEach(obj => scene.remove(obj));
+                
+                updateProgress(40);
+                
+                primes = generatePrimes(start, end);
+                const stats = analyzer.analyze(primes);
+                updateAnalysisPanel(stats);
+                
+                updateProgress(60);
+                
+                switch (currentMode) {
+                    case 'quantum-foam':
+                        createQuantumFoam();
+                        break;
+                    case 'spiral':
+                        createAdvancedSpiral();
+                        break;
+                    case 'mandelbrot':
+                        createMandelbrotMapping();
+                        break;
+                    case 'riemann-sphere':
+                        createRiemannSphere();
+                        break;
+                    case '3d-grid':
+                        createAdvanced3DGrid();
+                        break;
+                    case 'polar':
+                        createPolarStorm();
+                        break;
+                    case 'fibonacci':
+                        createFibonacciHelix();
+                        break;
+                    case 'twin-primes':
+                        createTwinPrimeConstellation();
+                        break;
+                    case 'gap-analysis':
+                        createGapTopology();
+                        break;
+                    case 'density-field':
+                        createDensityField();
+                        break;
+                }
+                
+                updateProgress(100);
+                hideLoading();
+                updatePatternHints();
+            }, 100);
+        }
+        
+        function createQuantumFoam() {
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+            const sizes = [];
+            
+            primes.forEach((prime, index) => {
+                // Quantum field positioning
+                const phase = prime * 0.01;
+                const amplitude = Math.log(prime) * fieldIntensity;
+                
+                const x = Math.sin(phase) * amplitude + Math.random() * 2 - 1;
+                const y = Math.cos(phase * PHI) * amplitude + Math.random() * 2 - 1;
+                const z = Math.sin(phase * EULER) * amplitude + Math.random() * 2 - 1;
+                
+                positions.push(x, y, z);
+                
+                // Quantum color interference
+                const freq1 = Math.sin(prime * 0.001) * 0.5 + 0.5;
+                const freq2 = Math.cos(prime * 0.003) * 0.5 + 0.5;
+                const freq3 = Math.sin(prime * 0.007) * 0.5 + 0.5;
+                
+                colors.push(freq1, freq2, freq3);
+                sizes.push(pointSize * (0.5 + Math.random() * 1.5));
+            });
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+            
+            const material = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 0 }
+                },
+                vertexShader: `
+                    attribute float size;
+                    attribute vec3 color;
+                    varying vec3 vColor;
+                    uniform float time;
+                    
+                    void main() {
+                        vColor = color;
+                        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                        gl_PointSize = size * (300.0 / -mvPosition.z) * (1.0 + sin(time + position.x) * 0.3);
+                        gl_Position = projectionMatrix * mvPosition;
+                    }
+                `,
+                fragmentShader: `
+                    varying vec3 vColor;
+                    
+                    void main() {
+                        float distanceToCenter = length(gl_PointCoord - vec2(0.5));
+                        if (distanceToCenter > 0.5) discard;
+                        
+                        float alpha = 1.0 - distanceToCenter * 2.0;
+                        gl_FragColor = vec4(vColor, alpha);
+                    }
+                `,
+                transparent: true,
+                vertexColors: true
+            });
+            
+            const points = new THREE.Points(geometry, material);
+            points.userData = { type: 'primes', material: material };
+            scene.add(points);
+        }
+        
+        function createAdvancedSpiral() {
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+            
+            let x = 0, y = 0;
+            let dx = 0, dy = -1;
+            const primeSet = new Set(primes);
+            const maxNum = Math.max(...primes);
+            
+            for (let i = 1; i <= maxNum; i++) {
+                if (primeSet.has(i)) {
+                    const height = Math.log(i) * fieldIntensity * 0.5;
+                    positions.push(x * 0.3, y * 0.3, height);
+                    
+                    // Height-based coloring with spiral position
+                    const spiralPhase = Math.atan2(y, x);
+                    const r = 0.5 + Math.sin(spiralPhase + height * 0.1) * 0.5;
+                    const g = 0.5 + Math.cos(spiralPhase * 2 + height * 0.1) * 0.5;
+                    const b = 0.8 + Math.sin(height * 0.2) * 0.2;
+                    
+                    colors.push(r, g, b);
+                }
+                
+                // Spiral movement
+                if (x === y || (x < 0 && x === -y) || (x > 0 && x === 1 - y)) {
+                    [dx, dy] = [-dy, dx];
+                }
+                x += dx;
+                y += dy;
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: pointSize,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const points = new THREE.Points(geometry, material);
+            scene.add(points);
+        }
+        
+        function createMandelbrotMapping() {
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+            
+            primes.forEach((prime, index) => {
+                // Map prime to complex plane
+                const real = (prime % 100) / 50 - 1;
+                const imag = Math.floor(prime / 100) / 50 - 1;
+                
+                // Mandelbrot-like iteration
+                let zr = 0, zi = 0;
+                let iterations = 0;
+                const maxIter = 20;
+                
+                while (zr * zr + zi * zi < 4 && iterations < maxIter) {
+                    const temp = zr * zr - zi * zi + real;
+                    zi = 2 * zr * zi + imag;
+                    zr = temp;
+                    iterations++;
+                }
+                
+                const escaped = iterations < maxIter;
+                const z = escaped ? iterations / maxIter * 5 : 0;
+                
+                positions.push(real * 10, imag * 10, z);
+                
+                // Color based on escape behavior
+                const hue = iterations / maxIter;
+                colors.push(hue, 1 - hue * 0.5, escaped ? 1 : 0.3);
+            });
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: pointSize * 1.2,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.9
+            });
+            
+            const points = new THREE.Points(geometry, material);
+            scene.add(points);
+        }
+        
+        function createRiemannSphere() {
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+            
+            primes.forEach((prime, index) => {
+                // Stereographic projection to sphere
+                const t = prime * 0.01;
+                const u = Math.sin(t) * fieldIntensity;
+                const v = Math.cos(t * PHI) * fieldIntensity;
+                
+                // Project to sphere
+                const denom = 1 + u * u + v * v;
+                const x = 2 * u / denom * 8;
+                const y = 2 * v / denom * 8;
+                const z = (u * u + v * v - 1) / denom * 8;
+                
+                positions.push(x, y, z);
+                
+                // Color based on position on sphere
+                const lat = Math.asin(z / 8);
+                const lon = Math.atan2(y, x);
+                
+                colors.push(
+                    0.5 + Math.sin(lat * 3) * 0.5,
+                    0.5 + Math.cos(lon * 2) * 0.5,
+                    0.8 + Math.sin(lat + lon) * 0.2
+                );
+            });
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: pointSize,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const points = new THREE.Points(geometry, material);
+            scene.add(points);
+        }
+        
+        function createAdvanced3DGrid() {
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+            const gridSize = Math.ceil(Math.cbrt(primes.length));
+            const primeSet = new Set(primes);
+            
+            let primeIndex = 0;
+            for (let x = 0; x < gridSize && primeIndex < primes.length; x++) {
+                for (let y = 0; y < gridSize && primeIndex < primes.length; y++) {
+                    for (let z = 0; z < gridSize && primeIndex < primes.length; z++) {
+                        const prime = primes[primeIndex];
+                        
+                        // Position with slight randomization
+                        const px = (x - gridSize/2) * 0.6 + (Math.random() - 0.5) * 0.2;
+                        const py = (y - gridSize/2) * 0.6 + (Math.random() - 0.5) * 0.2;
+                        const pz = (z - gridSize/2) * 0.6 + (Math.random() - 0.5) * 0.2;
+                        
+                        positions.push(px, py, pz);
+                        
+                        // Color based on prime properties
+                        const isPrime = primeSet.has(prime);
+                        const digitSum = prime.toString().split('').reduce((a, b) => a + parseInt(b), 0);
+                        
+                        colors.push(
+                            isPrime ? 1 : 0.3,
+                            digitSum / 50,
+                            Math.sin(prime * 0.01) * 0.5 + 0.5
+                        );
+                        
+                        primeIndex++;
+                    }
+                }
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: pointSize,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.9
+            });
+            
+            const points = new THREE.Points(geometry, material);
+            scene.add(points);
+        }
+        
+        function createPolarStorm() {
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+            
+            primes.forEach((prime, index) => {
+                const angle = prime * 0.1;
+                const radius = Math.sqrt(prime) * 0.2 * fieldIntensity;
+                const height = Math.sin(prime * 0.003) * 3 + Math.cos(prime * 0.007) * 2;
+                
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                const z = height;
+                
+                positions.push(x, y, z);
+                
+                // Storm-like coloring
+                const intensity = (Math.sin(angle * 3) + 1) * 0.5;
+                const electric = Math.abs(Math.sin(prime * 0.01));
+                
+                colors.push(intensity, electric, 1 - intensity * 0.3);
+            });
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: pointSize * 1.5,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.7
+            });
+            
+            const points = new THREE.Points(geometry, material);
+            scene.add(points);
+        }
+        
+        function createFibonacciHelix() {
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+            
+            primes.forEach((prime, index) => {
+                const phi = index * 2 * Math.PI / PHI;
+                const radius = Math.sqrt(index) * 0.15 * fieldIntensity;
+                const height = index * 0.02 - primes.length * 0.01;
+                
+                const x = Math.cos(phi) * radius;
+                const y = Math.sin(phi) * radius;
+                const z = height + Math.sin(prime * 0.01) * 0.5;
+                
+                positions.push(x, y, z);
+                
+                // Golden ratio coloring
+                const goldenAngle = phi * PHI;
+                colors.push(
+                    0.618 + Math.sin(goldenAngle) * 0.382,
+                    0.382 + Math.cos(goldenAngle * 1.618) * 0.618,
+                    0.8 + Math.sin(goldenAngle * 2.618) * 0.2
+                );
+            });
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: pointSize,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const points = new THREE.Points(geometry, material);
+            scene.add(points);
+        }
+        
+        function createTwinPrimeConstellation() {
+            const twinPairs = [];
+            for (let i = 0; i < primes.length - 1; i++) {
+                if (primes[i + 1] - primes[i] === 2) {
+                    twinPairs.push([primes[i], primes[i + 1]]);
+                }
+            }
+            
+            // Points for twin primes
+            const pointGeometry = new THREE.BufferGeometry();
+            const pointPositions = [];
+            const pointColors = [];
+            
+            // Lines connecting twin pairs
+            const lineGeometry = new THREE.BufferGeometry();
+            const linePositions = [];
+            const lineColors = [];
+            
+            twinPairs.forEach((pair, index) => {
+                const [p1, p2] = pair;
+                const angle = index * 0.3;
+                const radius = Math.log(p1) * 1.5 * fieldIntensity;
+                const height1 = Math.sin(p1 * 0.01) * 2;
+                const height2 = Math.sin(p2 * 0.01) * 2;
+                
+                const x1 = Math.cos(angle) * radius;
+                const y1 = Math.sin(angle) * radius;
+                const z1 = height1;
+                
+                const x2 = Math.cos(angle) * radius * 1.05;
+                const y2 = Math.sin(angle) * radius * 1.05;
+                const z2 = height2;
+                
+                // Add points
+                pointPositions.push(x1, y1, z1, x2, y2, z2);
+                pointColors.push(1, 0.5, 0, 0.5, 1, 1);
+                
+                // Add connecting line
+                linePositions.push(x1, y1, z1, x2, y2, z2);
+                lineColors.push(1, 0.8, 0, 1, 0.8, 0);
+            });
+            
+            pointGeometry.setAttribute('position', new THREE.Float32BufferAttribute(pointPositions, 3));
+            pointGeometry.setAttribute('color', new THREE.Float32BufferAttribute(pointColors, 3));
+            
+            const pointMaterial = new THREE.PointsMaterial({
+                size: pointSize * 2,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.9
+            });
+            
+            const points = new THREE.Points(pointGeometry, pointMaterial);
+            scene.add(points);
+            
+            lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+            lineGeometry.setAttribute('color', new THREE.Float32BufferAttribute(lineColors, 3));
+            
+            const lineMaterial = new THREE.LineBasicMaterial({
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.6
+            });
+            
+            const lines = new THREE.LineSegments(lineGeometry, lineMaterial);
+            scene.add(lines);
+        }
+        
+        function createGapTopology() {
+            const gaps = [];
+            for (let i = 1; i < primes.length; i++) {
+                gaps.push({
+                    gap: primes[i] - primes[i-1],
+                    position: i,
+                    prime: primes[i]
+                });
+            }
+            
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+            
+            gaps.forEach((gapData, index) => {
+                const x = (index - gaps.length/2) * 0.1;
+                const y = Math.sin(index * 0.01) * 2;
+                const z = gapData.gap * 0.5 * fieldIntensity;
+                
+                positions.push(x, y, z);
+                
+                // Color based on gap size
+                const normalized = Math.min(gapData.gap / 20, 1);
+                colors.push(normalized, 1 - normalized, 0.5);
+            });
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: pointSize * 1.5,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const points = new THREE.Points(geometry, material);
+            scene.add(points);
+        }
+        
+        function createDensityField() {
+            // Create a 3D density field visualization
+            const fieldSize = 20;
+            const resolution = 0.5;
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+            
+            for (let x = -fieldSize; x <= fieldSize; x += resolution) {
+                for (let y = -fieldSize; y <= fieldSize; y += resolution) {
+                    for (let z = -fieldSize; z <= fieldSize; z += resolution) {
+                        // Calculate local prime density
+                        let density = 0;
+                        const checkRadius = 2;
+                        
+                        primes.forEach(prime => {
+                            const px = (prime % 100) / 5 - 10;
+                            const py = Math.floor(prime / 100) / 5 - 10;
+                            const pz = Math.sin(prime * 0.01) * 5;
+                            
+                            const dist = Math.sqrt((x-px)**2 + (y-py)**2 + (z-pz)**2);
+                            if (dist < checkRadius) {
+                                density += (checkRadius - dist) / checkRadius;
+                            }
+                        });
+                        
+                        if (density > 0.1) {
+                            positions.push(x, y, z);
+                            
+                            const intensity = Math.min(density / 3, 1);
+                            colors.push(intensity, 0.5, 1 - intensity);
+                        }
+                    }
+                }
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: pointSize * 0.5,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.3
+            });
+            
+            const points = new THREE.Points(geometry, material);
+            scene.add(points);
+        }
+        
+        // Event handlers
+        function onMouseDown(event) {
+            isMouseDown = true;
+            mouseStart.x = event.clientX;
+            mouseStart.y = event.clientY;
+        }
+        
+        function onMouseMove(event) {
+            if (isMouseDown) {
+                const deltaX = event.clientX - mouseStart.x;
+                const deltaY = event.clientY - mouseStart.y;
+                
+                cameraAngle.y += deltaX * 0.01;
+                cameraAngle.x += deltaY * 0.01;
+                
+                updateCameraPosition();
+                
+                mouseStart.x = event.clientX;
+                mouseStart.y = event.clientY;
+            }
+        }
+        
+        function onMouseUp() {
+            isMouseDown = false;
+        }
+        
+        function onMouseWheel(event) {
+            event.preventDefault();
+            cameraDistance += event.deltaY * 0.01;
+            cameraDistance = Math.max(5, Math.min(100, cameraDistance));
+            updateCameraPosition();
+        }
+        
+        function onMouseClick(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children);
+            
+            if (intersects.length > 0) {
+                const point = intersects[0].point;
+                // Find closest prime to clicked point
+                let closestPrime = primes[0];
+                let minDistance = Infinity;
+                
+                // This is a simplified selection - in practice you'd map back to the prime
+                document.getElementById('selectedPrime').textContent = `Prime: ${closestPrime} (${point.x.toFixed(2)}, ${point.y.toFixed(2)}, ${point.z.toFixed(2)})`;
+            }
+        }
+        
+        function onKeyDown(event) {
+            switch(event.code) {
+                case 'Space':
+                    event.preventDefault();
+                    toggleAnimation();
+                    break;
+                case 'KeyR':
+                    resetCamera();
+                    break;
+                case 'KeyF':
+                    findInterestingRegion();
+                    break;
+            }
+        }
+        
+        function updateCameraPosition() {
+            camera.position.x = Math.cos(cameraAngle.y) * Math.cos(cameraAngle.x) * cameraDistance;
+            camera.position.y = Math.sin(cameraAngle.x) * cameraDistance;
+            camera.position.z = Math.sin(cameraAngle.y) * Math.cos(cameraAngle.x) * cameraDistance;
+            camera.lookAt(0, 0, 0);
+        }
+        
+        function updatePointSizes() {
+            scene.children.forEach(child => {
+                if (child.material && child.material.size !== undefined) {
+                    child.material.size = pointSize;
+                }
+            });
+        }
+        
+        function updateFieldIntensity() {
+            generateVisualization();
+        }
+        
+        function updateAnalysisPanel(stats) {
+            document.getElementById('primeCount').textContent = stats.primeCount;
+            document.getElementById('density').textContent = ((stats.primeCount / currentRange) * 100).toFixed(2) + '%';
+            document.getElementById('largestGap').textContent = stats.maxGap;
+            document.getElementById('twinCount').textContent = stats.twinCount;
+            
+            // Gap distribution
+            const gapDist = Object.entries(stats.gapDistribution)
+                .sort((a, b) => parseInt(b[1]) - parseInt(a[1]))
+                .slice(0, 5)
+                .map(([gap, count]) => `Gap ${gap}: ${count}`)
+                .join(', ');
+            
+            document.getElementById('gapDistribution').textContent = gapDist;
+        }
+        
+        function showLoading(text) {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('loading-text').textContent = text;
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+        
+        function updateProgress(percent) {
+            document.getElementById('progress').style.width = percent + '%';
+        }
+        
+        function toggleAnimation() {
+            isAnimating = !isAnimating;
+            document.getElementById('animBtn').textContent = isAnimating ? 'Pause' : 'Play';
+            if (isAnimating) animate();
+        }
+        
+        function resetCamera() {
+            cameraAngle = { x: 0, y: 0 };
+            cameraDistance = 25;
+            updateCameraPosition();
+        }
+        
+        function findInterestingRegion() {
+            // Animate to an interesting viewing angle
+            const targetAngle = { x: Math.PI * 0.2, y: Math.PI * 0.7 };
+            const animate = () => {
+                cameraAngle.x += (targetAngle.x - cameraAngle.x) * 0.1;
+                cameraAngle.y += (targetAngle.y - cameraAngle.y) * 0.1;
+                updateCameraPosition();
+                
+                if (Math.abs(targetAngle.x - cameraAngle.x) > 0.01) {
+                    requestAnimationFrame(animate);
+                }
+            };
+            animate();
+        }
+        
+        function toggleXRayMode() {
+            xrayMode = !xrayMode;
+            scene.children.forEach(child => {
+                if (child.material) {
+                    child.material.opacity = xrayMode ? 0.3 : 0.8;
+                }
+            });
+        }
+        
+        function captureFrame() {
+            const link = document.createElement('a');
+            link.download = `prime_visualization_${currentMode}_${Date.now()}.png`;
+            link.href = renderer.domElement.toDataURL();
+            link.click();
+        }
+        
+        function updateCustomRange() {
+            const start = parseInt(document.getElementById('startRange').value) || 1;
+            const end = parseInt(document.getElementById('endRange').value) || 5000;
+            currentRange = end;
+            document.getElementById('rangeSlider').value = end;
+            document.getElementById('rangeValue').textContent = end;
+        }
+        
+        // Toggle functions for analysis tools
+        function toggleConnections() {
+            // Implementation for connection visualization
+        }
+        
+        function toggleGapVisualization() {
+            // Implementation for gap visualization
+        }
+        
+        function toggleClusterAnalysis() {
+            // Implementation for cluster analysis
+        }
+        
+        function togglePatternDetection() {
+            // Implementation for pattern detection
+        }
+        
+        function toggleDensityField() {
+            // Implementation for density field toggle
+        }
+        
+        function regenerateVisualization() {
+            updateCustomRange();
+            generateVisualization();
+        }
+        
+        function animate() {
+            if (!isAnimating) return;
+            
+            requestAnimationFrame(animate);
+            frameCount++;
+            
+            // Update shader uniforms
+            scene.children.forEach(child => {
+                if (child.userData.type === 'primes' && child.userData.material) {
+                    child.userData.material.uniforms.time.value = frameCount * 0.01 * animationSpeed;
+                }
+            });
+            
+            // Subtle scene rotation
+            if (animationSpeed > 0) {
+                scene.rotation.z += 0.002 * animationSpeed;
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Initialize
+        init();
+        updatePatternHints();
+    </script>
+</body>
+</html>

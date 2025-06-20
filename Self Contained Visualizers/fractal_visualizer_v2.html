@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Julia Fractal Explorer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Orbitron', monospace;
+            background: radial-gradient(circle at 30% 70%, #0d1b2a 0%, #1b263b 25%, #415a77 50%, #778da9 100%);
+            overflow: hidden;
+            height: 100vh;
+            color: #fff;
+        }
+        
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(13, 27, 42, 0.4);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(119, 141, 169, 0.3);
+            border-radius: 25px;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .control-btn {
+            background: linear-gradient(45deg, #06ffa5, #00d4ff);
+            border: none;
+            color: #0d1b2a;
+            padding: 14px 22px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            box-shadow: 0 5px 20px rgba(6, 255, 165, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .control-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.5s;
+        }
+        
+        .control-btn:hover::before {
+            left: 100%;
+        }
+        
+        .control-btn:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 30px rgba(6, 255, 165, 0.6);
+            background: linear-gradient(45deg, #00d4ff, #06ffa5);
+        }
+        
+        .control-btn:active {
+            transform: translateY(-1px) scale(1.02);
+        }
+        
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .slider-label {
+            font-size: 13px;
+            color: #778da9;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+        }
+        
+        .slider {
+            width: 160px;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(119, 141, 169, 0.3);
+            outline: none;
+            appearance: none;
+            position: relative;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #06ffa5, #00d4ff);
+            cursor: pointer;
+            box-shadow: 0 3px 15px rgba(6, 255, 165, 0.6);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 5px 25px rgba(6, 255, 165, 0.8);
+        }
+        
+        #info {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(13, 27, 42, 0.4);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(119, 141, 169, 0.3);
+            border-radius: 20px;
+            padding: 20px;
+            font-size: 13px;
+            color: #778da9;
+            max-width: 320px;
+        }
+        
+        .title {
+            font-size: 20px;
+            font-weight: 900;
+            background: linear-gradient(45deg, #06ffa5, #00d4ff, #0077be);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2.5px;
+        }
+        
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 200;
+            text-align: center;
+            color: #fff;
+        }
+        
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(119, 141, 169, 0.3);
+            border-top: 4px solid #06ffa5;
+            border-radius: 50%;
+            animation: spin 1.2s linear infinite;
+            margin: 0 auto 25px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .auto-rotate {
+            background: linear-gradient(45deg, #ff6b6b, #feca57) !important;
+            box-shadow: 0 5px 20px rgba(255, 107, 107, 0.4) !important;
+        }
+        
+        .morphing {
+            background: linear-gradient(45deg, #a8e6cf, #88d8c0) !important;
+            box-shadow: 0 5px 20px rgba(168, 230, 207, 0.4) !important;
+        }
+        
+        .fractal-type {
+            background: linear-gradient(45deg, #ffd93d, #ff6b6b) !important;
+            box-shadow: 0 5px 20px rgba(255, 217, 61, 0.4) !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="loading">
+            <div class="spinner"></div>
+            <div>Materializing Julia Universe...</div>
+        </div>
+        
+        <div id="controls">
+            <div class="title">Julia Explorer</div>
+            
+            <div class="control-group">
+                <button class="control-btn" onclick="moveForward()">Dive In</button>
+                <button class="control-btn" onclick="moveBackward()">Pull Out</button>
+            </div>
+            
+            <div class="control-group">
+                <button class="control-btn" onclick="rotateLeft()">◀ Orbit</button>
+                <button class="control-btn" onclick="rotateRight()">Orbit ▶</button>
+            </div>
+            
+            <div class="control-group">
+                <button class="control-btn" onclick="moveUp()">Ascend</button>
+                <button class="control-btn" onclick="moveDown()">Descend</button>
+            </div>
+            
+            <div class="control-group">
+                <button class="control-btn" id="autoRotateBtn" onclick="toggleAutoRotate()">Auto Orbit</button>
+                <button class="control-btn" id="morphBtn" onclick="toggleMorphing()">Morph Mode</button>
+            </div>
+            
+            <div class="control-group">
+                <button class="control-btn fractal-type" id="fractalBtn" onclick="switchFractal()">Switch Type</button>
+            </div>
+            
+            <div class="slider-container">
+                <div class="slider-label">Complexity</div>
+                <input type="range" class="slider" id="complexitySlider" min="0.1" max="2.0" value="0.7" step="0.05" oninput="updateComplexity()">
+            </div>
+            
+            <div class="slider-container">
+                <div class="slider-label">Julia C Real</div>
+                <input type="range" class="slider" id="juliaRealSlider" min="-2" max="2" value="-0.7" step="0.01" oninput="updateJulia()">
+            </div>
+            
+            <div class="slider-container">
+                <div class="slider-label">Julia C Imag</div>
+                <input type="range" class="slider" id="juliaImagSlider" min="-2" max="2" value="0.27" step="0.01" oninput="updateJulia()">
+            </div>
+            
+            <div class="slider-container">
+                <div class="slider-label">Color Tempo</div>
+                <input type="range" class="slider" id="colorTempoSlider" min="0.1" max="5.0" value="1.0" step="0.1" oninput="updateColorTempo()">
+            </div>
+        </div>
+        
+        <div id="info">
+            <div><strong>Julia Set Explorer:</strong></div>
+            <div>• Navigate through infinite mathematical beauty</div>
+            <div>• Adjust Julia parameters for unique shapes</div>
+            <div>• Morph mode creates fluid transformations</div>
+            <div>• Switch between fractal algorithms</div>
+            <div>• Mouse: Click & drag to explore angles</div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let scene, camera, renderer, fractalMesh;
+        let autoRotate = false;
+        let morphing = false;
+        let mouseX = 0, mouseY = 0;
+        let isMouseDown = false;
+        let currentFractalType = 0; // 0: Julia, 1: Mandelbrot, 2: Burning Ship
+        
+        // Camera movement variables
+        let cameraPosition = { x: 0, y: 0, z: 4 };
+        let cameraRotation = { x: 0, y: 0 };
+        
+        // Fractal parameters
+        let fractalParams = {
+            complexity: 0.7,
+            juliaReal: -0.7,
+            juliaImag: 0.27,
+            colorTempo: 1.0
+        };
+        
+        const fractalTypes = ['Julia Set', 'Mandelbrot', 'Burning Ship'];
+        
+        function init() {
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x0d1b2a, 2, 20);
+            
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+            
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x0d1b2a, 0.1);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('container').appendChild(renderer.domElement);
+            
+            // Create fractal
+            createFractal();
+            
+            // Lighting
+            setupLighting();
+            
+            // Event listeners
+            setupEventListeners();
+            
+            // Hide loading
+            document.getElementById('loading').style.display = 'none';
+            
+            // Start animation
+            animate();
+        }
+        
+        function createFractal() {
+            const geometry = new THREE.PlaneGeometry(6, 6, 200, 200);
+            
+            // Advanced Julia Set shader
+            const material = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 0 },
+                    complexity: { value: fractalParams.complexity },
+                    juliaC: { value: new THREE.Vector2(fractalParams.juliaReal, fractalParams.juliaImag) },
+                    colorTempo: { value: fractalParams.colorTempo },
+                    fractalType: { value: currentFractalType },
+                    morphing: { value: morphing ? 1.0 : 0.0 }
+                },
+                vertexShader: `
+                    varying vec2 vUv;
+                    varying vec3 vPosition;
+                    varying vec3 vNormal;
+                    uniform float time;
+                    uniform float complexity;
+                    uniform float morphing;
+                    
+                    float fractalHeight(vec2 pos) {
+                        vec2 z = pos * complexity;
+                        float height = 0.0;
+                        
+                        for (int i = 0; i < 20; i++) {
+                            if (length(z) > 4.0) break;
+                            z = vec2(z.x * z.x - z.y * z.y, 2.0 * z.x * z.y) + pos * complexity;
+                            height += 0.1;
+                        }
+                        
+                        return height;
+                    }
+                    
+                    void main() {
+                        vUv = uv;
+                        vec3 newPos = position;
+                        
+                        // Calculate fractal displacement
+                        vec2 fractalPos = uv * 4.0 - 2.0;
+                        float height = fractalHeight(fractalPos);
+                        
+                        // Apply morphing animation
+                        float morphOffset = sin(time * 0.5 + fractalPos.x * 3.0) * morphing * 0.5;
+                        newPos.z += height * 0.5 + morphOffset;
+                        
+                        // Add wave motion
+                        newPos.z += sin(fractalPos.x * 5.0 + time) * 0.1;
+                        newPos.z += cos(fractalPos.y * 3.0 + time * 1.5) * 0.08;
+                        
+                        vPosition = newPos;
+                        vNormal = normalize(normalMatrix * normal);
+                        
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    varying vec2 vUv;
+                    varying vec3 vPosition;
+                    varying vec3 vNormal;
+                    uniform float time;
+                    uniform float complexity;
+                    uniform vec2 juliaC;
+                    uniform float colorTempo;
+                    uniform int fractalType;
+                    uniform float morphing;
+                    
+                    vec3 juliaSet(vec2 pos) {
+                        vec2 z = pos;
+                        float iterations = 0.0;
+                        
+                        for (int i = 0; i < 100; i++) {
+                            if (length(z) > 4.0) break;
+                            
+                            if (fractalType == 0) {
+                                // Julia Set
+                                z = vec2(z.x * z.x - z.y * z.y, 2.0 * z.x * z.y) + juliaC;
+                            } else if (fractalType == 1) {
+                                // Mandelbrot
+                                z = vec2(z.x * z.x - z.y * z.y, 2.0 * z.x * z.y) + pos;
+                            } else {
+                                // Burning Ship
+                                z = vec2(abs(z.x) * abs(z.x) - abs(z.y) * abs(z.y), 2.0 * abs(z.x) * abs(z.y)) + pos;
+                            }
+                            
+                            iterations += 1.0;
+                        }
+                        
+                        return vec3(iterations / 100.0);
+                    }
+                    
+                    void main() {
+                        vec2 fractalPos = (vUv - 0.5) * 4.0 * complexity;
+                        
+                        // Add time-based morphing
+                        if (morphing > 0.5) {
+                            fractalPos += vec2(sin(time * 0.3), cos(time * 0.4)) * 0.2;
+                        }
+                        
+                        vec3 fractalData = juliaSet(fractalPos);
+                        float intensity = fractalData.x;
+                        
+                        // Dynamic color palette
+                        vec3 color1 = vec3(0.02, 1.0, 0.65);     // Cyan-green
+                        vec3 color2 = vec3(0.0, 0.83, 1.0);     // Sky blue
+                        vec3 color3 = vec3(0.0, 0.47, 0.75);    // Deep blue
+                        vec3 color4 = vec3(0.05, 0.11, 0.16);   // Dark blue
+                        
+                        // Time-based color shifting
+                        float colorShift = sin(time * colorTempo + intensity * 10.0) * 0.5 + 0.5;
+                        vec3 baseColor = mix(mix(color4, color3, intensity), mix(color2, color1, intensity), colorShift);
+                        
+                        // Add iridescent effect
+                        vec3 viewDir = normalize(-vPosition);
+                        float fresnel = pow(1.0 - dot(vNormal, viewDir), 2.0);
+                        vec3 iridescent = vec3(sin(fresnel * 10.0 + time), cos(fresnel * 8.0 + time), sin(fresnel * 6.0 + time)) * 0.3;
+                        
+                        // Lighting
+                        vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
+                        float diff = max(dot(vNormal, lightDir), 0.0);
+                        
+                        vec3 finalColor = baseColor * (diff + 0.4) + iridescent * fresnel;
+                        
+                        // Add glow effect
+                        if (intensity < 0.1) {
+                            finalColor += vec3(0.02, 1.0, 0.65) * (0.1 - intensity) * 5.0;
+                        }
+                        
+                        gl_FragColor = vec4(finalColor, 1.0);
+                    }
+                `
+            });
+            
+            if (fractalMesh) {
+                scene.remove(fractalMesh);
+            }
+            
+            fractalMesh = new THREE.Mesh(geometry, material);
+            fractalMesh.rotation.x = -Math.PI / 2;
+            fractalMesh.castShadow = true;
+            fractalMesh.receiveShadow = true;
+            scene.add(fractalMesh);
+        }
+        
+        function setupLighting() {
+            // Ambient light
+            const ambientLight = new THREE.AmbientLight(0x778da9, 0.3);
+            scene.add(ambientLight);
+            
+            // Directional light
+            const directionalLight = new THREE.DirectionalLight(0x06ffa5, 0.8);
+            directionalLight.position.set(5, 10, 5);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+            
+            // Point lights for atmosphere
+            const pointLight1 = new THREE.PointLight(0x06ffa5, 1.5, 30);
+            pointLight1.position.set(8, 8, 8);
+            scene.add(pointLight1);
+            
+            const pointLight2 = new THREE.PointLight(0x00d4ff, 1.2, 25);
+            pointLight2.position.set(-8, 5, -8);
+            scene.add(pointLight2);
+            
+            const pointLight3 = new THREE.PointLight(0x0077be, 1.0, 20);
+            pointLight3.position.set(0, -5, 10);
+            scene.add(pointLight3);
+        }
+        
+        function setupEventListeners() {
+            window.addEventListener('resize', onWindowResize);
+            
+            // Mouse controls
+            renderer.domElement.addEventListener('mousedown', (e) => {
+                isMouseDown = true;
+            });
+            
+            renderer.domElement.addEventListener('mouseup', (e) => {
+                isMouseDown = false;
+            });
+            
+            renderer.domElement.addEventListener('mousemove', (e) => {
+                if (isMouseDown) {
+                    const deltaX = e.clientX - mouseX;
+                    const deltaY = e.clientY - mouseY;
+                    
+                    cameraRotation.y += deltaX * 0.01;
+                    cameraRotation.x += deltaY * 0.01;
+                    
+                    // Clamp vertical rotation
+                    cameraRotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, cameraRotation.x));
+                }
+                
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+            });
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const time = Date.now() * 0.001;
+            
+            // Update fractal shader
+            if (fractalMesh && fractalMesh.material.uniforms) {
+                fractalMesh.material.uniforms.time.value = time;
+            }
+            
+            // Auto rotation
+            if (autoRotate) {
+                cameraRotation.y += 0.008;
+                if (fractalMesh) {
+                    fractalMesh.rotation.z += 0.002;
+                }
+            }
+            
+            // Update camera position based on rotation
+            const radius = 4;
+            camera.position.x = cameraPosition.x + radius * Math.sin(cameraRotation.y) * Math.cos(cameraRotation.x);
+            camera.position.y = cameraPosition.y + radius * Math.sin(cameraRotation.x);
+            camera.position.z = cameraPosition.z + radius * Math.cos(cameraRotation.y) * Math.cos(cameraRotation.x);
+            
+            camera.lookAt(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+            
+            renderer.render(scene, camera);
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Control functions
+        function moveForward() {
+            const direction = new THREE.Vector3();
+            camera.getWorldDirection(direction);
+            cameraPosition.x += direction.x * 0.4;
+            cameraPosition.y += direction.y * 0.4;
+            cameraPosition.z += direction.z * 0.4;
+        }
+        
+        function moveBackward() {
+            const direction = new THREE.Vector3();
+            camera.getWorldDirection(direction);
+            cameraPosition.x -= direction.x * 0.4;
+            cameraPosition.y -= direction.y * 0.4;
+            cameraPosition.z -= direction.z * 0.4;
+        }
+        
+        function rotateLeft() {
+            cameraRotation.y -= 0.25;
+        }
+        
+        function rotateRight() {
+            cameraRotation.y += 0.25;
+        }
+        
+        function moveUp() {
+            cameraPosition.y += 0.4;
+        }
+        
+        function moveDown() {
+            cameraPosition.y -= 0.4;
+        }
+        
+        function toggleAutoRotate() {
+            autoRotate = !autoRotate;
+            const btn = document.getElementById('autoRotateBtn');
+            if (autoRotate) {
+                btn.classList.add('auto-rotate');
+                btn.textContent = 'Stop Orbit';
+            } else {
+                btn.classList.remove('auto-rotate');
+                btn.textContent = 'Auto Orbit';
+            }
+        }
+        
+        function toggleMorphing() {
+            morphing = !morphing;
+            const btn = document.getElementById('morphBtn');
+            if (morphing) {
+                btn.classList.add('morphing');
+                btn.textContent = 'Stop Morph';
+            } else {
+                btn.classList.remove('morphing');
+                btn.textContent = 'Morph Mode';
+            }
+            
+            if (fractalMesh && fractalMesh.material.uniforms) {
+                fractalMesh.material.uniforms.morphing.value = morphing ? 1.0 : 0.0;
+            }
+        }
+        
+        function switchFractal() {
+            currentFractalType = (currentFractalType + 1) % fractalTypes.length;
+            const btn = document.getElementById('fractalBtn');
+            btn.textContent = fractalTypes[currentFractalType];
+            
+            if (fractalMesh && fractalMesh.material.uniforms) {
+                fractalMesh.material.uniforms.fractalType.value = currentFractalType;
+            }
+        }
+        
+        function updateComplexity() {
+            fractalParams.complexity = parseFloat(document.getElementById('complexitySlider').value);
+            if (fractalMesh && fractalMesh.material.uniforms) {
+                fractalMesh.material.uniforms.complexity.value = fractalParams.complexity;
+            }
+        }
+        
+        function updateJulia() {
+            fractalParams.juliaReal = parseFloat(document.getElementById('juliaRealSlider').value);
+            fractalParams.juliaImag = parseFloat(document.getElementById('juliaImagSlider').value);
+            if (fractalMesh && fractalMesh.material.uniforms) {
+                fractalMesh.material.uniforms.juliaC.value.set(fractalParams.juliaReal, fractalParams.juliaImag);
+            }
+        }
+        
+        function updateColorTempo() {
+            fractalParams.colorTempo = parseFloat(document.getElementById('colorTempoSlider').value);
+            if (fractalMesh && fractalMesh.material.uniforms) {
+                fractalMesh.material.uniforms.colorTempo.value = fractalParams.colorTempo;
+            }
+        }
+        
+        // Initialize when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
