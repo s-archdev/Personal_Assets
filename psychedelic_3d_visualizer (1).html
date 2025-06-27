@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Psychedelic 3D Audio Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(circle, #0a0a0a, #000);
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            color: #fff;
+        }
+
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #canvas {
+            display: block;
+            background: linear-gradient(45deg, #ff006e, #8338ec, #3a86ff, #06ffa5);
+            background-size: 400% 400%;
+            animation: psychedelicBg 8s ease-in-out infinite;
+        }
+
+        @keyframes psychedelicBg {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(45deg, #ff006e, #8338ec);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(255, 0, 110, 0.5);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 12px;
+            color: #ccc;
+            text-transform: uppercase;
+        }
+
+        input[type="range"] {
+            width: 200px;
+            height: 4px;
+            background: linear-gradient(90deg, #ff006e, #8338ec, #3a86ff);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        #info {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 12px;
+            text-align: right;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 24px;
+            text-align: center;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <canvas id="canvas"></canvas>
+        
+        <div id="controls">
+            <button id="startBtn">START EXPERIENCE</button>
+            <button id="uploadBtn">UPLOAD AUDIO</button>
+            <input type="file" id="fileInput" accept="audio/*">
+            
+            <div class="control-group">
+                <label>Intensity</label>
+                <input type="range" id="intensity" min="0.1" max="5" value="1" step="0.1">
+            </div>
+            
+            <div class="control-group">
+                <label>Complexity</label>
+                <input type="range" id="complexity" min="16" max="256" value="64" step="16">
+            </div>
+            
+            <div class="control-group">
+                <label>Speed</label>
+                <input type="range" id="speed" min="0.1" max="3" value="1" step="0.1">
+            </div>
+        </div>
+
+        <div id="info">
+            <div>🎵 PSYCHEDELIC 3D VISUALIZER</div>
+            <div>Click START to begin with microphone</div>
+            <div>Or upload your own audio file</div>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            LOADING PSYCHEDELIC EXPERIENCE...
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        class PsychedelicVisualizer {
+            constructor() {
+                this.canvas = document.getElementById('canvas');
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true });
+                this.audioContext = null;
+                this.analyser = null;
+                this.dataArray = null;
+                this.source = null;
+                
+                this.geometries = [];
+                this.materials = [];
+                this.meshes = [];
+                this.particles = null;
+                
+                this.time = 0;
+                this.intensity = 1;
+                this.complexity = 64;
+                this.speed = 1;
+                
+                this.init();
+                this.setupControls();
+                this.animate();
+            }
+
+            init() {
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setClearColor(0x000000);
+                this.camera.position.z = 5;
+                
+                this.createPsychedelicScene();
+                this.setupLighting();
+                
+                window.addEventListener('resize', () => this.onWindowResize());
+            }
+
+            createPsychedelicScene() {
+                // Create multiple geometric shapes with different materials
+                const geometryTypes = [
+                    new THREE.TorusGeometry(1, 0.3, 16, 32),
+                    new THREE.OctahedronGeometry(1, 2),
+                    new THREE.IcosahedronGeometry(1, 1),
+                    new THREE.TetrahedronGeometry(1, 0),
+                    new THREE.DodecahedronGeometry(1, 0)
+                ];
+
+                // Create materials with different shader effects
+                for (let i = 0; i < 5; i++) {
+                    const material = new THREE.MeshPhongMaterial({
+                        color: new THREE.Color().setHSL(i / 5, 1, 0.5),
+                        shininess: 100,
+                        transparent: true,
+                        opacity: 0.8
+                    });
+                    
+                    const mesh = new THREE.Mesh(geometryTypes[i % geometryTypes.length], material);
+                    mesh.position.set(
+                        (Math.random() - 0.5) * 10,
+                        (Math.random() - 0.5) * 10,
+                        (Math.random() - 0.5) * 10
+                    );
+                    mesh.rotation.set(
+                        Math.random() * Math.PI,
+                        Math.random() * Math.PI,
+                        Math.random() * Math.PI
+                    );
+                    
+                    this.meshes.push(mesh);
+                    this.scene.add(mesh);
+                }
+
+                // Create particle system
+                this.createParticleSystem();
+                
+                // Create tunnel effect
+                this.createTunnel();
+            }
+
+            createParticleSystem() {
+                const particleCount = 2000;
+                const positions = new Float32Array(particleCount * 3);
+                const colors = new Float32Array(particleCount * 3);
+                
+                for (let i = 0; i < particleCount; i++) {
+                    positions[i * 3] = (Math.random() - 0.5) * 100;
+                    positions[i * 3 + 1] = (Math.random() - 0.5) * 100;
+                    positions[i * 3 + 2] = (Math.random() - 0.5) * 100;
+                    
+                    const color = new THREE.Color().setHSL(Math.random(), 1, 0.8);
+                    colors[i * 3] = color.r;
+                    colors[i * 3 + 1] = color.g;
+                    colors[i * 3 + 2] = color.b;
+                }
+
+                const geometry = new THREE.BufferGeometry();
+                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+                const material = new THREE.PointsMaterial({
+                    size: 0.1,
+                    vertexColors: true,
+                    transparent: true,
+                    opacity: 0.8,
+                    blending: THREE.AdditiveBlending
+                });
+
+                this.particles = new THREE.Points(geometry, material);
+                this.scene.add(this.particles);
+            }
+
+            createTunnel() {
+                const tunnelGeometry = new THREE.CylinderGeometry(5, 5, 100, 32, 1, true);
+                const tunnelMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x8338ec,
+                    transparent: true,
+                    opacity: 0.3,
+                    side: THREE.BackSide,
+                    wireframe: true
+                });
+                
+                const tunnel = new THREE.Mesh(tunnelGeometry, tunnelMaterial);
+                tunnel.rotation.x = Math.PI / 2;
+                this.scene.add(tunnel);
+                this.tunnel = tunnel;
+            }
+
+            setupLighting() {
+                // Ambient light
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+                this.scene.add(ambientLight);
+
+                // Point lights with different colors
+                const colors = [0xff006e, 0x8338ec, 0x3a86ff, 0x06ffa5];
+                this.lights = [];
+                
+                for (let i = 0; i < 4; i++) {
+                    const light = new THREE.PointLight(colors[i], 2, 100);
+                    light.position.set(
+                        Math.cos(i * Math.PI / 2) * 10,
+                        Math.sin(i * Math.PI / 2) * 10,
+                        Math.cos(i * Math.PI / 4) * 5
+                    );
+                    this.scene.add(light);
+                    this.lights.push(light);
+                }
+            }
+
+            setupControls() {
+                document.getElementById('startBtn').addEventListener('click', () => this.startMicrophone());
+                document.getElementById('uploadBtn').addEventListener('click', () => {
+                    document.getElementById('fileInput').click();
+                });
+                document.getElementById('fileInput').addEventListener('change', (e) => this.loadAudioFile(e));
+                
+                document.getElementById('intensity').addEventListener('input', (e) => {
+                    this.intensity = parseFloat(e.target.value);
+                });
+                
+                document.getElementById('complexity').addEventListener('input', (e) => {
+                    this.complexity = parseInt(e.target.value);
+                });
+                
+                document.getElementById('speed').addEventListener('input', (e) => {
+                    this.speed = parseFloat(e.target.value);
+                });
+            }
+
+            async startMicrophone() {
+                try {
+                    document.getElementById('loading').style.display = 'block';
+                    
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    this.initAudio();
+                    this.source = this.audioContext.createMediaStreamSource(stream);
+                    this.source.connect(this.analyser);
+                    
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('loading').style.display = 'none';
+                } catch (err) {
+                    console.error('Error accessing microphone:', err);
+                    alert('Could not access microphone. Please try uploading an audio file instead.');
+                    document.getElementById('loading').style.display = 'none';
+                }
+            }
+
+            loadAudioFile(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                document.getElementById('loading').style.display = 'block';
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.initAudio();
+                    this.audioContext.decodeAudioData(e.target.result)
+                        .then((buffer) => {
+                            if (this.source) {
+                                this.source.stop();
+                            }
+                            
+                            this.source = this.audioContext.createBufferSource();
+                            this.source.buffer = buffer;
+                            this.source.loop = true;
+                            this.source.connect(this.analyser);
+                            this.source.start();
+                            
+                            document.getElementById('uploadBtn').disabled = true;
+                            document.getElementById('loading').style.display = 'none';
+                        })
+                        .catch((err) => {
+                            console.error('Error decoding audio:', err);
+                            alert('Error loading audio file. Please try a different file.');
+                            document.getElementById('loading').style.display = 'none';
+                        });
+                };
+                reader.readAsArrayBuffer(file);
+            }
+
+            initAudio() {
+                if (!this.audioContext) {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.analyser = this.audioContext.createAnalyser();
+                    this.analyser.fftSize = 2048;
+                    this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+                }
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                this.time += 0.01 * this.speed;
+                
+                if (this.analyser) {
+                    this.analyser.getByteFrequencyData(this.dataArray);
+                    this.updateVisualization();
+                }
+                
+                this.updateScene();
+                this.renderer.render(this.scene, this.camera);
+            }
+
+            updateVisualization() {
+                const avgFreq = this.dataArray.reduce((a, b) => a + b) / this.dataArray.length;
+                const normalizedAvg = avgFreq / 255;
+                
+                // Update geometries based on audio
+                this.meshes.forEach((mesh, i) => {
+                    const freqIndex = Math.floor((i / this.meshes.length) * this.dataArray.length);
+                    const freq = this.dataArray[freqIndex] / 255;
+                    
+                    mesh.scale.setScalar(1 + freq * this.intensity);
+                    mesh.rotation.x += freq * 0.1 * this.speed;
+                    mesh.rotation.y += freq * 0.15 * this.speed;
+                    mesh.rotation.z += freq * 0.08 * this.speed;
+                    
+                    // Color morphing
+                    mesh.material.color.setHSL(
+                        (this.time * 0.5 + i * 0.2) % 1,
+                        0.8 + freq * 0.2,
+                        0.3 + freq * 0.4
+                    );
+                });
+                
+                // Update particles
+                if (this.particles) {
+                    const positions = this.particles.geometry.attributes.position.array;
+                    const colors = this.particles.geometry.attributes.color.array;
+                    
+                    for (let i = 0; i < positions.length; i += 3) {
+                        const freqIndex = Math.floor((i / positions.length) * this.dataArray.length);
+                        const freq = this.dataArray[freqIndex] / 255;
+                        
+                        positions[i + 2] += freq * this.intensity * 0.5;
+                        
+                        if (positions[i + 2] > 50) {
+                            positions[i + 2] = -50;
+                        }
+                        
+                        const color = new THREE.Color().setHSL(
+                            (this.time + i * 0.01) % 1,
+                            1,
+                            0.5 + freq * 0.5
+                        );
+                        colors[i] = color.r;
+                        colors[i + 1] = color.g;
+                        colors[i + 2] = color.b;
+                    }
+                    
+                    this.particles.geometry.attributes.position.needsUpdate = true;
+                    this.particles.geometry.attributes.color.needsUpdate = true;
+                }
+                
+                // Update lights
+                this.lights.forEach((light, i) => {
+                    const freqIndex = Math.floor((i / this.lights.length) * this.dataArray.length);
+                    const freq = this.dataArray[freqIndex] / 255;
+                    
+                    light.intensity = 1 + freq * this.intensity * 3;
+                    light.position.x = Math.cos(this.time + i * Math.PI / 2) * (10 + freq * 5);
+                    light.position.y = Math.sin(this.time + i * Math.PI / 2) * (10 + freq * 5);
+                });
+                
+                // Camera movement
+                this.camera.position.x = Math.cos(this.time * 0.3) * (2 + normalizedAvg * 3);
+                this.camera.position.y = Math.sin(this.time * 0.2) * (2 + normalizedAvg * 3);
+                this.camera.lookAt(0, 0, 0);
+            }
+
+            updateScene() {
+                // Continuous scene animation even without audio
+                this.meshes.forEach((mesh, i) => {
+                    mesh.rotation.x += 0.005 * this.speed;
+                    mesh.rotation.y += 0.007 * this.speed;
+                    mesh.position.y += Math.sin(this.time + i) * 0.01;
+                });
+                
+                if (this.tunnel) {
+                    this.tunnel.rotation.z += 0.01 * this.speed;
+                    this.tunnel.material.color.setHSL((this.time * 0.2) % 1, 0.8, 0.5);
+                }
+                
+                if (this.particles) {
+                    this.particles.rotation.y += 0.002 * this.speed;
+                }
+            }
+
+            onWindowResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        }
+
+        // Initialize the visualizer when the page loads
+        window.addEventListener('load', () => {
+            new PsychedelicVisualizer();
+        });
+    </script>
+</body>
+</html>
